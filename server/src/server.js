@@ -63,10 +63,10 @@ app.get('/', (req, res) => {
 
 // ==========================================
 // MOUNT FEATURE MODULES HERE
-// Example:
-// const authRoutes = require('./modules/auth/auth.routes');
-// app.use('/api/v1/auth', authRoutes);
 // ==========================================
+const authRoutes = require('./modules/auth/auth.routes');
+
+app.use(['/api/v1/auth', '/api/auth'], authRoutes);
 
 // Global Error Handling
 app.use(notFound);

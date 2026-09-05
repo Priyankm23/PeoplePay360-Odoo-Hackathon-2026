@@ -87,7 +87,7 @@ PeoplePay360 (Monorepo)
 - **Database & ORM**: PostgreSQL 18 with Prisma ORM (Strict schema integrity, ACID migrations, relational relations)
 - **Validation**: Zod (End-to-end runtime request validation and type safety)
 - **Authentication**: JWT (`jsonwebtoken`) + `bcryptjs` with HTTP-only cookies and role-based route middleware
-- **Frontend**: React (Vite) + Tailwind CSS + Lucide Icons + TanStack Table / Recharts
+- **Frontend**: Next.js (App Router) + React + Tailwind CSS + Lucide Icons + TanStack Table / Recharts
 - **PDF Generation**: Dedicated server-side/client-side printable PDF renderer
 
 ---
