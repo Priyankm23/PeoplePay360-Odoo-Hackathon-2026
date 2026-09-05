@@ -65,8 +65,14 @@ app.get('/', (req, res) => {
 // MOUNT FEATURE MODULES HERE
 // ==========================================
 const authRoutes = require('./modules/auth/auth.routes');
+const employeeRoutes = require('./modules/employee/employee.routes');
+const departmentRoutes = require('./modules/department/department.routes');
+const jobPositionRoutes = require('./modules/jobPosition/jobPosition.routes');
 
 app.use(['/api/v1/auth', '/api/auth'], authRoutes);
+app.use(['/api/v1/employees', '/api/employees'], employeeRoutes);
+app.use(['/api/v1/departments', '/api/departments'], departmentRoutes);
+app.use(['/api/v1/job-positions', '/api/job-positions'], jobPositionRoutes);
 
 // Global Error Handling
 app.use(notFound);

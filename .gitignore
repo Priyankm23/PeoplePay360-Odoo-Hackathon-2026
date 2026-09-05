@@ -44,3 +44,5 @@ Thumbs.db
 .cache/
 tmp/
 temp/
+.bolt/
+.freebuff/

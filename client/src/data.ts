@@ -1,0 +1,587 @@
+import type {
+  Employee,
+  Contract,
+  AttendanceRecord,
+  TimeOffRequest,
+  TimeOffType,
+  TimeOffAllocation,
+  Payrun,
+  Payslip,
+  SalaryStructure,
+  SalaryRule,
+  DepartmentInfo,
+  WorkingSchedule,
+  PayrollAlert,
+} from '@/types';
+
+export const employees: Employee[] = [
+  {
+    id: 'e1',
+    firstName: 'Amara',
+    lastName: 'Okafor',
+    email: 'amara.okafor@peoplepay360.com',
+    avatarColor: '#5C7A99',
+    jobTitle: 'VP of Engineering',
+    department: 'Engineering',
+    managerId: null,
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2021-03-15',
+    phone: '+1 (415) 555-0101',
+    contractCount: 2,
+    attendanceCount: 22,
+    timeOffCount: 5,
+    allocationCount: 3,
+  },
+  {
+    id: 'e2',
+    firstName: 'Daniel',
+    lastName: 'Reyes',
+    email: 'daniel.reyes@peoplepay360.com',
+    avatarColor: '#B8862B',
+    jobTitle: 'Senior Software Engineer',
+    department: 'Engineering',
+    managerId: 'e1',
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2022-06-01',
+    phone: '+1 (415) 555-0102',
+    contractCount: 1,
+    attendanceCount: 21,
+    timeOffCount: 3,
+    allocationCount: 2,
+  },
+  {
+    id: 'e3',
+    firstName: 'Priya',
+    lastName: 'Sharma',
+    email: 'priya.sharma@peoplepay360.com',
+    avatarColor: '#3E7D5C',
+    jobTitle: 'Frontend Engineer',
+    department: 'Engineering',
+    managerId: 'e1',
+    workingSchedule: 'Full-time (40h)',
+    status: 'probation',
+    hireDate: '2024-11-01',
+    phone: '+1 (415) 555-0103',
+    contractCount: 1,
+    attendanceCount: 18,
+    timeOffCount: 1,
+    allocationCount: 2,
+  },
+  {
+    id: 'e4',
+    firstName: 'Marcus',
+    lastName: 'Chen',
+    email: 'marcus.chen@peoplepay360.com',
+    avatarColor: '#B4432F',
+    jobTitle: 'DevOps Engineer',
+    department: 'Engineering',
+    managerId: 'e1',
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2023-01-10',
+    phone: '+1 (415) 555-0104',
+    contractCount: 1,
+    attendanceCount: 22,
+    timeOffCount: 2,
+    allocationCount: 2,
+  },
+  {
+    id: 'e5',
+    firstName: 'Sofia',
+    lastName: 'Bianchi',
+    email: 'sofia.bianchi@peoplepay360.com',
+    avatarColor: '#5C7A99',
+    jobTitle: 'Finance Director',
+    department: 'Finance',
+    managerId: null,
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2020-09-01',
+    phone: '+1 (415) 555-0105',
+    contractCount: 2,
+    attendanceCount: 22,
+    timeOffCount: 6,
+    allocationCount: 3,
+  },
+  {
+    id: 'e6',
+    firstName: 'James',
+    lastName: 'Okonkwo',
+    email: 'james.okonkwo@peoplepay360.com',
+    avatarColor: '#6E8422',
+    jobTitle: 'Payroll Specialist',
+    department: 'Finance',
+    managerId: 'e5',
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2022-03-15',
+    phone: '+1 (415) 555-0106',
+    contractCount: 1,
+    attendanceCount: 20,
+    timeOffCount: 4,
+    allocationCount: 2,
+  },
+  {
+    id: 'e7',
+    firstName: 'Elena',
+    lastName: 'Volkova',
+    email: 'elena.volkova@peoplepay360.com',
+    avatarColor: '#B8862B',
+    jobTitle: 'HR Business Partner',
+    department: 'Human Resources',
+    managerId: null,
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2021-07-12',
+    phone: '+1 (415) 555-0107',
+    contractCount: 1,
+    attendanceCount: 21,
+    timeOffCount: 7,
+    allocationCount: 3,
+  },
+  {
+    id: 'e8',
+    firstName: 'Thomas',
+    lastName: 'Müller',
+    email: 'thomas.muller@peoplepay360.com',
+    avatarColor: '#3E7D5C',
+    jobTitle: 'HR Coordinator',
+    department: 'Human Resources',
+    managerId: 'e7',
+    workingSchedule: 'Part-time (24h)',
+    status: 'on_leave',
+    hireDate: '2023-04-20',
+    phone: '+1 (415) 555-0108',
+    contractCount: 1,
+    attendanceCount: 12,
+    timeOffCount: 8,
+    allocationCount: 2,
+  },
+  {
+    id: 'e9',
+    firstName: 'Aisha',
+    lastName: 'Nakamura',
+    email: 'aisha.nakamura@peoplepay360.com',
+    avatarColor: '#B4432F',
+    jobTitle: 'Sales Manager',
+    department: 'Sales',
+    managerId: null,
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2022-01-05',
+    phone: '+1 (415) 555-0109',
+    contractCount: 1,
+    attendanceCount: 20,
+    timeOffCount: 3,
+    allocationCount: 2,
+  },
+  {
+    id: 'e10',
+    firstName: 'Carlos',
+    lastName: 'Mendoza',
+    email: 'carlos.mendoza@peoplepay360.com',
+    avatarColor: '#5C7A99',
+    jobTitle: 'Account Executive',
+    department: 'Sales',
+    managerId: 'e9',
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2023-08-15',
+    phone: '+1 (415) 555-0110',
+    contractCount: 1,
+    attendanceCount: 19,
+    timeOffCount: 2,
+    allocationCount: 2,
+  },
+  {
+    id: 'e11',
+    firstName: 'Grace',
+    lastName: 'Adeyemi',
+    email: 'grace.adeyemi@peoplepay360.com',
+    avatarColor: '#6E8422',
+    jobTitle: 'Operations Lead',
+    department: 'Operations',
+    managerId: null,
+    workingSchedule: 'Full-time (40h)',
+    status: 'active',
+    hireDate: '2021-11-01',
+    phone: '+1 (415) 555-0111',
+    contractCount: 2,
+    attendanceCount: 22,
+    timeOffCount: 4,
+    allocationCount: 3,
+  },
+  {
+    id: 'e12',
+    firstName: 'Yuki',
+    lastName: 'Tanaka',
+    email: 'yuki.tanaka@peoplepay360.com',
+    avatarColor: '#B8862B',
+    jobTitle: 'Operations Analyst',
+    department: 'Operations',
+    managerId: 'e11',
+    workingSchedule: 'Part-time (32h)',
+    status: 'inactive',
+    hireDate: '2022-09-01',
+    phone: '+1 (415) 555-0112',
+    contractCount: 1,
+    attendanceCount: 5,
+    timeOffCount: 1,
+    allocationCount: 1,
+  },
+];
+
+export function getEmployee(id: string): Employee | undefined {
+  return employees.find((e) => e.id === id);
+}
+
+export function getManager(id: string | null): Employee | undefined {
+  if (!id) return undefined;
+  return employees.find((e) => e.id === id);
+}
+
+export const contracts: Contract[] = [
+  {
+    id: 'c1',
+    employeeId: 'e1',
+    startDate: '2021-03-15',
+    endDate: null,
+    wage: 18500,
+    wageType: 'monthly',
+    salaryStructure: 'Executive Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c2',
+    employeeId: 'e1',
+    startDate: '2019-01-15',
+    endDate: '2021-03-14',
+    wage: 14200,
+    wageType: 'monthly',
+    salaryStructure: 'Senior Monthly',
+    status: 'expired',
+  },
+  {
+    id: 'c3',
+    employeeId: 'e2',
+    startDate: '2022-06-01',
+    endDate: null,
+    wage: 9800,
+    wageType: 'monthly',
+    salaryStructure: 'Standard Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c4',
+    employeeId: 'e3',
+    startDate: '2024-11-01',
+    endDate: null,
+    wage: 7200,
+    wageType: 'monthly',
+    salaryStructure: 'Probation Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c5',
+    employeeId: 'e4',
+    startDate: '2023-01-10',
+    endDate: null,
+    wage: 8400,
+    wageType: 'monthly',
+    salaryStructure: 'Standard Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c6',
+    employeeId: 'e5',
+    startDate: '2020-09-01',
+    endDate: null,
+    wage: 16200,
+    wageType: 'monthly',
+    salaryStructure: 'Executive Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c7',
+    employeeId: 'e6',
+    startDate: '2022-03-15',
+    endDate: null,
+    wage: 6800,
+    wageType: 'monthly',
+    salaryStructure: 'Standard Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c8',
+    employeeId: 'e7',
+    startDate: '2021-07-12',
+    endDate: null,
+    wage: 8200,
+    wageType: 'monthly',
+    salaryStructure: 'Standard Monthly',
+    status: 'running',
+  },
+  {
+    id: 'c9',
+    employeeId: 'e8',
+    startDate: '2023-04-20',
+    endDate: null,
+    wage: 45,
+    wageType: 'hourly',
+    salaryStructure: 'Part-time Hourly',
+    status: 'running',
+  },
+  {
+    id: 'c10',
+    employeeId: 'e9',
+    startDate: '2022-01-05',
+    endDate: null,
+    wage: 9200,
+    wageType: 'monthly',
+    salaryStructure: 'Standard Monthly',
+    status: 'running',
+  },
+];
+
+export const attendanceRecords: AttendanceRecord[] = [
+  { id: 'a1', employeeId: 'e1', date: '2025-09-04', checkIn: '08:52', checkOut: '17:18', workedHours: '8h 26m', status: 'present', missingCheckout: false },
+  { id: 'a2', employeeId: 'e2', date: '2025-09-04', checkIn: '09:12', checkOut: '17:30', workedHours: '8h 18m', status: 'late', missingCheckout: false },
+  { id: 'a3', employeeId: 'e3', date: '2025-09-04', checkIn: '08:48', checkOut: '18:05', workedHours: '9h 17m', status: 'overtime', missingCheckout: false },
+  { id: 'a4', employeeId: 'e4', date: '2025-09-04', checkIn: '08:55', checkOut: null, workedHours: null, status: 'present', missingCheckout: true },
+  { id: 'a5', employeeId: 'e5', date: '2025-09-04', checkIn: '08:45', checkOut: '17:10', workedHours: '8h 25m', status: 'present', missingCheckout: false },
+  { id: 'a6', employeeId: 'e6', date: '2025-09-04', checkIn: '09:05', checkOut: '17:20', workedHours: '8h 15m', status: 'late', missingCheckout: false },
+  { id: 'a7', employeeId: 'e7', date: '2025-09-04', checkIn: '08:50', checkOut: '17:00', workedHours: '8h 10m', status: 'present', missingCheckout: false },
+  { id: 'a8', employeeId: 'e8', date: '2025-09-04', checkIn: null, checkOut: null, workedHours: null, status: 'absent', missingCheckout: false },
+  { id: 'a9', employeeId: 'e9', date: '2025-09-04', checkIn: '08:58', checkOut: '17:15', workedHours: '8h 17m', status: 'present', missingCheckout: false },
+  { id: 'a10', employeeId: 'e10', date: '2025-09-04', checkIn: '09:15', checkOut: null, workedHours: null, status: 'late', missingCheckout: true },
+  { id: 'a11', employeeId: 'e11', date: '2025-09-04', checkIn: '08:40', checkOut: '17:05', workedHours: '8h 25m', status: 'present', missingCheckout: false },
+  { id: 'a12', employeeId: 'e2', date: '2025-09-03', checkIn: '08:50', checkOut: '18:30', workedHours: '9h 40m', status: 'overtime', missingCheckout: false },
+  { id: 'a13', employeeId: 'e1', date: '2025-09-03', checkIn: '08:45', checkOut: '17:12', workedHours: '8h 27m', status: 'present', missingCheckout: false },
+  { id: 'a14', employeeId: 'e5', date: '2025-09-03', checkIn: '08:48', checkOut: '17:05', workedHours: '8h 17m', status: 'present', missingCheckout: false },
+];
+
+export const timeOffTypes: TimeOffType[] = [
+  { id: 't1', name: 'Annual Leave', code: 'AL', color: '#5C7A99', allocationType: 'Accrued', paid: true },
+  { id: 't2', name: 'Sick Leave', code: 'SL', color: '#B4432F', allocationType: 'Accrued', paid: true },
+  { id: 't3', name: 'Personal Leave', code: 'PL', color: '#B8862B', allocationType: 'Fixed', paid: false },
+  { id: 't4', name: 'Maternity/Paternity', code: 'MT', color: '#3E7D5C', allocationType: 'Fixed', paid: true },
+  { id: 't5', name: 'Unpaid Leave', code: 'UL', color: '#93998F', allocationType: 'None', paid: false },
+];
+
+export const timeOffRequests: TimeOffRequest[] = [
+  { id: 'r1', employeeId: 'e2', type: 'Annual Leave', startDate: '2025-09-10', endDate: '2025-09-12', duration: 3, status: 'submitted', reason: 'Family trip', allocationName: 'Annual Leave 2025', allocationTotal: 25, allocationUsed: 12.5 },
+  { id: 'r2', employeeId: 'e7', type: 'Annual Leave', startDate: '2025-09-15', endDate: '2025-09-19', duration: 5, status: 'approved', reason: 'Vacation', allocationName: 'Annual Leave 2025', allocationTotal: 25, allocationUsed: 20 },
+  { id: 'r3', employeeId: 'e4', type: 'Sick Leave', startDate: '2025-09-05', endDate: '2025-09-05', duration: 1, status: 'approved', reason: 'Flu', allocationName: 'Sick Leave 2025', allocationTotal: 10, allocationUsed: 3 },
+  { id: 'r4', employeeId: 'e8', type: 'Annual Leave', startDate: '2025-08-25', endDate: '2025-09-08', duration: 11, status: 'approved', reason: 'Extended vacation', allocationName: 'Annual Leave 2025', allocationTotal: 25, allocationUsed: 22 },
+  { id: 'r5', employeeId: 'e10', type: 'Personal Leave', startDate: '2025-09-20', endDate: '2025-09-20', duration: 1, status: 'draft', reason: 'Personal matter', allocationName: 'Personal Leave 2025', allocationTotal: 3, allocationUsed: 1 },
+  { id: 'r6', employeeId: 'e3', type: 'Sick Leave', startDate: '2025-08-28', endDate: '2025-08-29', duration: 2, status: 'refused', reason: 'Medical appointment', allocationName: 'Sick Leave 2025', allocationTotal: 10, allocationUsed: 2 },
+  { id: 'r7', employeeId: 'e5', type: 'Annual Leave', startDate: '2025-10-01', endDate: '2025-10-03', duration: 3, status: 'submitted', reason: 'Conference travel', allocationName: 'Annual Leave 2025', allocationTotal: 25, allocationUsed: 15 },
+];
+
+export const timeOffAllocations: TimeOffAllocation[] = [
+  { id: 'al1', employeeId: 'e1', type: 'Annual Leave', totalDays: 25, usedDays: 10, remainingDays: 15, period: '2025' },
+  { id: 'al2', employeeId: 'e1', type: 'Sick Leave', totalDays: 10, usedDays: 2, remainingDays: 8, period: '2025' },
+  { id: 'al3', employeeId: 'e2', type: 'Annual Leave', totalDays: 25, usedDays: 12.5, remainingDays: 12.5, period: '2025' },
+  { id: 'al4', employeeId: 'e7', type: 'Annual Leave', totalDays: 25, usedDays: 20, remainingDays: 5, period: '2025' },
+  { id: 'al5', employeeId: 'e8', type: 'Annual Leave', totalDays: 25, usedDays: 22, remainingDays: 3, period: '2025' },
+  { id: 'al6', employeeId: 'e4', type: 'Sick Leave', totalDays: 10, usedDays: 3, remainingDays: 7, period: '2025' },
+  { id: 'al7', employeeId: 'e10', type: 'Personal Leave', totalDays: 3, usedDays: 1, remainingDays: 2, period: '2025' },
+];
+
+export const salaryStructures: SalaryStructure[] = [
+  { id: 's1', name: 'Standard Monthly', type: 'monthly', rulesCount: 8, parent: null, active: true },
+  { id: 's2', name: 'Executive Monthly', type: 'monthly', rulesCount: 12, parent: 'Standard Monthly', active: true },
+  { id: 's3', name: 'Probation Monthly', type: 'monthly', rulesCount: 6, parent: 'Standard Monthly', active: true },
+  { id: 's4', name: 'Part-time Hourly', type: 'hourly', rulesCount: 5, parent: null, active: true },
+  { id: 's5', name: 'Contractor Hourly', type: 'hourly', rulesCount: 4, parent: 'Part-time Hourly', active: false },
+];
+
+export const salaryRules: SalaryRule[] = [
+  { id: 'sr1', name: 'Gross Salary', code: 'GROSS', category: 'Basic', structure: 'Standard Monthly', sequence: 1, condition: 'always', formula: 'contract.wage', active: true },
+  { id: 'sr2', name: 'Basic Salary', code: 'BASIC', category: 'Basic', structure: 'Standard Monthly', sequence: 2, condition: 'always', formula: 'GROSS * 0.6', active: true },
+  { id: 'sr3', name: 'Housing Allowance', code: 'HRA', category: 'Allowance', structure: 'Standard Monthly', sequence: 3, condition: 'always', formula: 'BASIC * 0.2', active: true },
+  { id: 'sr4', name: 'Transport Allowance', code: 'TRV', category: 'Allowance', structure: 'Standard Monthly', sequence: 4, condition: 'always', formula: 'BASIC * 0.05', active: true },
+  { id: 'sr5', name: 'Income Tax', code: 'TAX', category: 'Deduction', structure: 'Standard Monthly', sequence: 5, condition: 'GROSS > 5000', formula: 'GROSS * 0.15', active: true },
+  { id: 'sr6', name: 'Social Security', code: 'SOC', category: 'Deduction', structure: 'Standard Monthly', sequence: 6, condition: 'always', formula: 'GROSS * 0.06', active: true },
+  { id: 'sr7', name: 'Performance Bonus', code: 'BONUS', category: 'Allowance', structure: 'Executive Monthly', sequence: 3, condition: 'quarter', formula: 'BASIC * 0.15', active: true },
+  { id: 'sr8', name: 'Health Insurance', code: 'HEALTH', category: 'Deduction', structure: 'Standard Monthly', sequence: 7, condition: 'always', formula: '250', active: true },
+  { id: 'sr9', name: 'Net Salary', code: 'NET', category: 'Basic', structure: 'Standard Monthly', sequence: 99, condition: 'always', formula: 'GROSS + ALLOW - DED', active: true },
+];
+
+export const payruns: Payrun[] = [
+  { id: 'p1', name: 'September 2025 Payrun', salaryStructure: 'Standard Monthly', periodStart: '2025-09-01', periodEnd: '2025-09-30', status: 'draft', employeeCount: 11, totalNet: 89240, createdAt: '2025-09-04' },
+  { id: 'p2', name: 'August 2025 Payrun', salaryStructure: 'Standard Monthly', periodStart: '2025-08-01', periodEnd: '2025-08-31', status: 'paid', employeeCount: 12, totalNet: 94180, createdAt: '2025-08-01' },
+  { id: 'p3', name: 'July 2025 Payrun', salaryStructure: 'Standard Monthly', periodStart: '2025-07-01', periodEnd: '2025-07-31', status: 'paid', employeeCount: 12, totalNet: 93850, createdAt: '2025-07-01' },
+  { id: 'p4', name: 'June 2025 Payrun', salaryStructure: 'Standard Monthly', periodStart: '2025-06-01', periodEnd: '2025-06-30', status: 'paid', employeeCount: 11, totalNet: 87620, createdAt: '2025-06-01' },
+  { id: 'p5', name: 'May 2025 Payrun', salaryStructure: 'Standard Monthly', periodStart: '2025-05-01', periodEnd: '2025-05-31', status: 'paid', employeeCount: 11, totalNet: 87100, createdAt: '2025-05-01' },
+];
+
+export const payslips: Payslip[] = [
+  {
+    id: 'ps1',
+    employeeId: 'e1',
+    payrunId: 'p1',
+    payPeriod: 'September 2025',
+    payrunRef: 'SEP-2025-001',
+    status: 'draft',
+    gross: 18500,
+    net: 14685,
+    warnings: 0,
+    lines: [
+      { ruleName: 'Basic Salary', category: 'Basic', amount: 11100 },
+      { ruleName: 'Housing Allowance', category: 'Allowance', amount: 2220 },
+      { ruleName: 'Transport Allowance', category: 'Allowance', amount: 555 },
+      { ruleName: 'Performance Bonus', category: 'Allowance', amount: 1665 },
+      { ruleName: 'Income Tax', category: 'Deduction', amount: -2775 },
+      { ruleName: 'Social Security', category: 'Deduction', amount: -1110 },
+      { ruleName: 'Health Insurance', category: 'Deduction', amount: -250 },
+      { ruleName: 'Net Salary', category: 'Basic', amount: 14685 },
+    ],
+  },
+  {
+    id: 'ps2',
+    employeeId: 'e2',
+    payrunId: 'p1',
+    payPeriod: 'September 2025',
+    payrunRef: 'SEP-2025-002',
+    status: 'draft',
+    gross: 9800,
+    net: 7797,
+    warnings: 0,
+    lines: [
+      { ruleName: 'Basic Salary', category: 'Basic', amount: 5880 },
+      { ruleName: 'Housing Allowance', category: 'Allowance', amount: 1176 },
+      { ruleName: 'Transport Allowance', category: 'Allowance', amount: 294 },
+      { ruleName: 'Income Tax', category: 'Deduction', amount: -1470 },
+      { ruleName: 'Social Security', category: 'Deduction', amount: -588 },
+      { ruleName: 'Health Insurance', category: 'Deduction', amount: -250 },
+      { ruleName: 'Net Salary', category: 'Basic', amount: 7797 },
+    ],
+  },
+  {
+    id: 'ps3',
+    employeeId: 'e3',
+    payrunId: 'p1',
+    payPeriod: 'September 2025',
+    payrunRef: 'SEP-2025-003',
+    status: 'draft',
+    gross: 7200,
+    net: 5732,
+    warnings: 1,
+    lines: [
+      { ruleName: 'Basic Salary', category: 'Basic', amount: 4320 },
+      { ruleName: 'Housing Allowance', category: 'Allowance', amount: 864 },
+      { ruleName: 'Transport Allowance', category: 'Allowance', amount: 216 },
+      { ruleName: 'Income Tax', category: 'Deduction', amount: -1080 },
+      { ruleName: 'Social Security', category: 'Deduction', amount: -432 },
+      { ruleName: 'Health Insurance', category: 'Deduction', amount: -250 },
+      { ruleName: 'Net Salary', category: 'Basic', amount: 5732 },
+    ],
+  },
+  {
+    id: 'ps4',
+    employeeId: 'e5',
+    payrunId: 'p1',
+    payPeriod: 'September 2025',
+    payrunRef: 'SEP-2025-004',
+    status: 'draft',
+    gross: 16200,
+    net: 12887,
+    warnings: 0,
+    lines: [
+      { ruleName: 'Basic Salary', category: 'Basic', amount: 9720 },
+      { ruleName: 'Housing Allowance', category: 'Allowance', amount: 1944 },
+      { ruleName: 'Transport Allowance', category: 'Allowance', amount: 486 },
+      { ruleName: 'Performance Bonus', category: 'Allowance', amount: 1458 },
+      { ruleName: 'Income Tax', category: 'Deduction', amount: -2430 },
+      { ruleName: 'Social Security', category: 'Deduction', amount: -972 },
+      { ruleName: 'Health Insurance', category: 'Deduction', amount: -250 },
+      { ruleName: 'Net Salary', category: 'Basic', amount: 12887 },
+    ],
+  },
+  {
+    id: 'ps5',
+    employeeId: 'e6',
+    payrunId: 'p1',
+    payPeriod: 'September 2025',
+    payrunRef: 'SEP-2025-005',
+    status: 'draft',
+    gross: 6800,
+    net: 5408,
+    warnings: 1,
+    lines: [
+      { ruleName: 'Basic Salary', category: 'Basic', amount: 4080 },
+      { ruleName: 'Housing Allowance', category: 'Allowance', amount: 816 },
+      { ruleName: 'Transport Allowance', category: 'Allowance', amount: 204 },
+      { ruleName: 'Income Tax', category: 'Deduction', amount: -1020 },
+      { ruleName: 'Social Security', category: 'Deduction', amount: -408 },
+      { ruleName: 'Health Insurance', category: 'Deduction', amount: -250 },
+      { ruleName: 'Net Salary', category: 'Basic', amount: 5408 },
+    ],
+  },
+];
+
+export const departments: DepartmentInfo[] = [
+  { id: 'd1', name: 'Engineering', headId: 'e1', employeeCount: 4, description: 'Software development, infrastructure, and DevOps' },
+  { id: 'd2', name: 'Finance', headId: 'e5', employeeCount: 2, description: 'Financial planning, accounting, and payroll processing' },
+  { id: 'd3', name: 'Human Resources', headId: 'e7', employeeCount: 2, description: 'Employee relations, recruitment, and people operations' },
+  { id: 'd4', name: 'Sales', headId: 'e9', employeeCount: 2, description: 'Revenue generation, account management, and business development' },
+  { id: 'd5', name: 'Operations', headId: 'e11', employeeCount: 2, description: 'Internal operations, logistics, and process management' },
+];
+
+export const workingSchedules: WorkingSchedule[] = [
+  { id: 'ws1', name: 'Full-time (40h)', hoursPerWeek: 40, daysPerWeek: 5, startTime: '09:00', endTime: '17:00', flexible: true, employeeCount: 10 },
+  { id: 'ws2', name: 'Part-time (32h)', hoursPerWeek: 32, daysPerWeek: 4, startTime: '09:00', endTime: '17:00', flexible: false, employeeCount: 1 },
+  { id: 'ws3', name: 'Part-time (24h)', hoursPerWeek: 24, daysPerWeek: 3, startTime: '09:00', endTime: '17:00', flexible: false, employeeCount: 1 },
+];
+
+export const payrollAlerts: PayrollAlert[] = [
+  { id: 'pa1', type: 'Missing Bank Details', affectedCount: 2, severity: 'warning', message: 'Employees without bank account information for direct deposit' },
+  { id: 'pa2', type: 'Contract Expiring', affectedCount: 1, severity: 'info', message: 'Employee contract expiring within 30 days' },
+  { id: 'pa3', type: 'Probation Period Ending', affectedCount: 1, severity: 'info', message: 'Probation period ending — review needed' },
+  { id: 'pa4', type: 'Salary Structure Mismatch', affectedCount: 1, severity: 'warning', message: 'Employee assigned inactive salary structure' },
+];
+
+export function contractsForEmployee(employeeId: string): Contract[] {
+  return contracts.filter((c) => c.employeeId === employeeId);
+}
+
+export function attendanceForEmployee(employeeId: string): AttendanceRecord[] {
+  return attendanceRecords.filter((a) => a.employeeId === employeeId);
+}
+
+export function timeOffForEmployee(employeeId: string): TimeOffRequest[] {
+  return timeOffRequests.filter((r) => r.employeeId === employeeId);
+}
+
+export function payslipsForEmployee(employeeId: string): Payslip[] {
+  return payslips.filter((p) => p.employeeId === employeeId);
+}
+
+export function payslipsForPayrun(payrunId: string): Payslip[] {
+  return payslips.filter((p) => p.payrunId === payrunId);
+}
+
+export function employeesByDepartment(dept: string): Employee[] {
+  return employees.filter((e) => e.department === dept);
+}
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function formatCurrencyDetailed(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
