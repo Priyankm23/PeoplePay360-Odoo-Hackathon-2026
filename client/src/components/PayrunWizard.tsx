@@ -241,7 +241,7 @@ export function PayrunWizard({ open, onClose, onSuccess }: PayrunWizardProps) {
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 rounded-sm-md text-xs font-medium',
                 step === s.num
-                  ? 'bg-ink-900 text-white'
+                  ? 'bg-sidebar-bg text-white'
                   : step > s.num
                   ? 'bg-chartreuse-100 text-chartreuse-800'
                   : 'bg-paper text-ink-400'

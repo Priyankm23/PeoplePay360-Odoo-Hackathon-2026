@@ -242,7 +242,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
             onClick={() => setViewMode('list')}
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors',
-              viewMode === 'list' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:bg-paper'
+              viewMode === 'list' ? 'bg-sidebar-bg text-white' : 'text-ink-500 hover:bg-paper'
             )}
           >
             <List size={14} />
@@ -252,7 +252,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
             onClick={() => setViewMode('kanban')}
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors',
-              viewMode === 'kanban' ? 'bg-ink-900 text-white' : 'text-ink-500 hover:bg-paper'
+              viewMode === 'kanban' ? 'bg-sidebar-bg text-white' : 'text-ink-500 hover:bg-paper'
             )}
           >
             <LayoutGrid size={14} />
@@ -268,7 +268,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
             className={cn(
               'text-xs px-2.5 py-1 rounded-sm-md border transition-colors whitespace-nowrap',
               selectedDeptId === null
-                ? 'border-ink-900 bg-ink-900 text-white'
+                ? 'border-sidebar-bg bg-sidebar-bg text-white'
                 : 'border-border bg-surface text-ink-500 hover:border-ink-300'
             )}
           >
@@ -281,7 +281,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
               className={cn(
                 'text-xs px-2.5 py-1 rounded-sm-md border transition-colors whitespace-nowrap',
                 selectedDeptId === dept.id
-                  ? 'border-ink-900 bg-ink-900 text-white'
+                  ? 'border-sidebar-bg bg-sidebar-bg text-white'
                   : 'border-border bg-surface text-ink-500 hover:border-ink-300'
               )}
             >
@@ -297,7 +297,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
             className={cn(
               'text-xs px-2.5 py-1 rounded-sm-md border transition-colors whitespace-nowrap',
               statusFilter === null
-                ? 'border-ink-900 bg-ink-900 text-white'
+                ? 'border-sidebar-bg bg-sidebar-bg text-white'
                 : 'border-border bg-surface text-ink-500 hover:border-ink-300'
             )}
           >
@@ -310,7 +310,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
               className={cn(
                 'text-xs px-2.5 py-1 rounded-sm-md border transition-colors capitalize whitespace-nowrap',
                 statusFilter === st
-                  ? 'border-ink-900 bg-ink-900 text-white'
+                  ? 'border-sidebar-bg bg-sidebar-bg text-white'
                   : 'border-border bg-surface text-ink-500 hover:border-ink-300'
               )}
             >

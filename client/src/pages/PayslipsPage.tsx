@@ -113,7 +113,7 @@ export function PayslipsPage({ onNavigate, userSession }: PayslipsPageProps) {
               className={cn(
                 'px-3 py-1 rounded text-xs font-medium transition-colors',
                 statusFilter === tab
-                  ? 'bg-ink-900 text-white'
+                  ? 'bg-sidebar-bg text-white'
                   : 'text-ink-600 hover:text-ink-900 hover:bg-paper'
               )}
             >

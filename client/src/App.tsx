@@ -56,15 +56,15 @@ export function App() {
       const roleMap: Record<string, UserRole> = { ADMIN: 'Admin', HR_MANAGER: 'HR Manager', HR_PAYROLL_MANAGER: 'HR Payroll Manager', HR_PAYROLL_USER: 'HR Payroll User', EMPLOYEE: 'Employee' };
       const role = roleMap[user.role] || 'Employee';
       setUserSession({ email: user.email, name: user.employee ? `${user.employee.firstName} ${user.employee.lastName}` : user.email.split('@')[0], role, employeeId: user.employeeId, department: user.employee?.department?.name || 'General', avatarColor: 'bg-chartreuse-500' });
-      if (role === 'Employee' && user.employeeId) { setSelectedEmployeeId(user.employeeId); setCurrentView('employee-detail'); } else if (role === 'HR Manager') setCurrentView('employees');
+      if (role === 'Employee' && user.employeeId) { setSelectedEmployeeId(user.employeeId); setCurrentView('employee-detail'); } else { setCurrentView('payroll-dashboard'); }
     }).catch(() => {}).finally(() => setIsInitializing(false));
   }, []);
 
-  const handleLogin = (session: UserSession) => { setUserSession(session); if (session.role === 'Employee') { if (session.employeeId) setSelectedEmployeeId(session.employeeId); setCurrentView('employee-detail'); } else if (session.role === 'HR Manager') setCurrentView('employees'); else setCurrentView('payroll-dashboard'); };
+  const handleLogin = (session: UserSession) => { setUserSession(session); if (session.role === 'Employee') { if (session.employeeId) setSelectedEmployeeId(session.employeeId); setCurrentView('employee-detail'); } else { setCurrentView('payroll-dashboard'); } };
   const handleLogout = async () => { try { await api.auth.logout(); } catch {} setUserSession(null); };
   const handleNavigate = (view: View, id?: string) => {
     if ((view === 'employees' || view === 'contracts') && userSession?.role === 'Employee') { if (userSession.employeeId) setSelectedEmployeeId(userSession.employeeId); setCurrentView('employee-detail'); return; }
-    if ((view === 'payroll-dashboard' || view === 'payruns' || view === 'salary-structures' || view === 'salary-rules') && userSession?.role === 'HR Manager') { setCurrentView('employees'); return; }
+    if ((view === 'payruns' || view === 'salary-structures' || view === 'salary-rules') && userSession?.role === 'HR Manager') { setCurrentView('employees'); return; }
     setCurrentView(view);
     if (view === 'employee-detail' && id) setSelectedEmployeeId(id);
     if (view === 'payrun-detail' && id) setSelectedPayrunId(id);
@@ -92,7 +92,7 @@ export function App() {
       case 'time-off-requests':
       case 'time-off-allocations':
       case 'time-off-types': return <TimeOffRequestsPage onNavigate={handleNavigate} employeeId={relatedEmployeeId} />;
-      case 'payroll-dashboard': return <PayrollDashboard />;
+      case 'payroll-dashboard': return <PayrollDashboard userSession={userSession} onNavigate={handleNavigate} />;
       case 'payruns': return <PayrunsPage onNavigate={handleNavigate} userSession={userSession} />;
       case 'payrun-detail': return <PayrunDetailPage payrunId={selectedPayrunId} onNavigate={handleNavigate} userSession={userSession} />;
       case 'payslips': return <PayslipsPage onNavigate={handleNavigate} userSession={userSession} />;

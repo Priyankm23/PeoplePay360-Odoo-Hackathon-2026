@@ -1,92 +1,91 @@
-# Walkthrough: Payrun Generation Wizard & Batch Payslip Computation Engine (Features 9, 10, & 11)
+# Walkthrough: Feature 13 - Unified Payroll Dashboard
 
-## Summary of Completed Work
+## Overview
 
-Successfully built and verified the complete full-stack **Payrun Generation Wizard, Batch Payslip Computation Engine, and Payslip Viewer** under branch `feature/payrun-computation`.
+Successfully designed, built, and verified **Feature 13: Unified Payroll Dashboard** under branch `feature/payroll-dashboard`. 
 
----
+The dashboard combines real-time data across **5 distinct core models**:
+1. **Employees / Departments** (Headcount, hierarchy, active workforce)
+2. **Contracts** (Active wages, schedules, expiring contracts)
+3. **Payruns & Payslips** (Disbursed net salary, gross totals, paid vs. pending status, 6-month historical trend)
+4. **Attendance** (Present, late, absent, overtime, missing checkouts, manual corrections, coverage health %)
+5. **Time Off Requests & Allocations** (Approved leave days, pending requests, remaining balances)
 
-### 1. Two-Step Creation Wizard (Architecture Decision #8: Zero Phantom Records)
-- **Step 1: Scope & Date Range Configuration**:
-  - Name input (auto-defaults to current month, e.g., *"September 2026 Regular Payrun"*).
-  - Structure selection dropdown populated live from `/api/salary-structures`.
-  - Date inputs for `periodStart` and `periodEnd` with validation (`periodStart <= periodEnd`).
-  - Preview button invoking `GET /api/payruns/preview-eligible` with query parameters.
-  - **Zero Database Writes**: Pure read-only computation that returns eligible employees and reasons for any disqualified employees without creating phantom `Payrun` or `Payslip` records.
-- **Step 2: Interactive Employee Review & Final Submission**:
-  - Live metric summary: Target structure, eligible employee count, total employee count.
-  - Interactive employee table with individual checkboxes, "Select All Eligible", and "Deselect All".
-  - Disables and highlights disqualified employees (e.g., *"Assigned to different structure"* or *"No active running contract in this period"*).
-  - Submit button calling `POST /api/payruns` to persist the `Payrun` batch and child `DRAFT` payslips in a single atomic database transaction.
+All metrics are computed **live from database tables** (zero stale or static snapshots).
 
 ---
 
-### 2. Deterministic Batch Computation Engine ($Sequence_1 < Sequence_2 < \dots$)
-- **Sequential Rule Execution**: Evaluates active rules in strictly ascending sequence order:
-  - Supports `FIXED` amount rules.
-  - Supports `PERCENTAGE` rules referencing earlier base rules.
-- **Attendance Days Integration**: Automatically counts attendance records within `[periodStart, periodEnd]` for each employee and records `workedDays`.
-- **Totals Calculation**: Dynamically computes `grossSalary`, total deductions, and `netSalary`.
-- **Automated Advisory & Blocking Warnings**:
-  - **Advisory Warnings**: Missing attendance records (`workedDays === 0`), missing bank accounts.
-  - **Blocking Warnings**: Invalid contracts, overlapping status discrepancies.
-- **Atomic Payslip Snapshot Lines**: Replaces and persists snapshot lines (`BASIC`, `ALLOWANCE`, `DEDUCTION`, `NET`) on each child payslip.
+## What Was Changed & Implemented
+
+### 1. Backend Service & API
+- **`server/src/modules/dashboard/dashboard.service.js`**:
+  - Live query aggregator parsing periods (`YYYY-MM`), department filters, and employee schedule types.
+  - Computes top 5 executive KPIs:
+    - `totalNetSalaryPaid` (with `% vs previous month` trend comparison)
+    - `payslipsGenerated` (`paidCount` vs `pendingCount`)
+    - `averageSalary` (per paid employee or active contract wage)
+    - `approvedTimeOff` (sum of approved leave duration)
+    - `attendanceHealthPct` (ratio of present attendances)
+  - Computes visual chart signals:
+    - `salaryCostByDepartment`: Groups salary totals across departments.
+    - `monthlyNetSalaryTrend`: Trailing 6-month historical trend.
+    - `payslipStatusSplit`: Stacked distribution (`Paid`, `Validated`, `Computed`, `Draft`).
+    - `alerts`: Missing bank accounts, duplicate payslips, unvalidated drafts, expiring contracts.
+  - Computes detailed breakdowns:
+    - `attendanceOverview`: Status counts (`Present`, `Late`, `Absent`, `Overtime`), missing checkouts, manual corrections, and coverage %.
+    - `timeOffOverview`: Grouped by leave type with approved days, pending requests, and remaining balances.
+    - `departmentOverview`: Department table with active headcount and monthly salary.
+  - **Role Scoping (RBAC)**: If the caller is `HR_MANAGER`, sensitive monetary figures are redacted (`null` / empty arrays).
+- **`server/src/modules/dashboard/dashboard.controller.js`**:
+  - Request handler for `GET /api/dashboard`.
+- **`server/src/modules/dashboard/dashboard.routes.js`**:
+  - Protected with `authenticate` and `authorize(['ADMIN', 'HR_PAYROLL_MANAGER', 'HR_PAYROLL_USER', 'HR_MANAGER'])`.
+  - Employees are strictly blocked (`403 Forbidden`).
+- **`server/src/server.js`**:
+  - Mounted `/api/v1/dashboard` and `/api/dashboard`.
 
 ---
 
-### 3. Payrun State Machine Lifecycle & Deletion Guard
-- **Lifecycle Progression**:
-  $$\text{DRAFT} \xrightarrow{\text{compute}} \text{COMPUTED} \xrightarrow{\text{validate}} \text{VALIDATED} \xrightarrow{\text{mark-paid}} \text{PAID}$$
-- **Recomputation**: Payruns in `COMPUTED` status can be recomputed at any time before validation.
-- **Validation Guard**: Validation is blocked with `409 UNRESOLVED_WARNINGS` if any child payslip has blocking warnings.
-- **Deletion Guard**: Payruns in `DRAFT` or `COMPUTED` can be deleted. Once transitioned to `VALIDATED` or `PAID`, deletions are strictly blocked with `409 CANNOT_DELETE_FINALIZED_PAYRUN`.
-
----
-
-### 4. Role-Based Access Control (RBAC)
-| Role | View Payruns | Create Payrun | Compute / Validate | Mark Paid | Delete Payrun |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Admin** | ✅ Full | ✅ Allowed | ✅ Allowed | ✅ Allowed | ✅ Allowed (Draft/Computed) |
-| **HR Payroll Manager** | ✅ Full | ✅ Allowed | ✅ Allowed | ✅ Allowed | ✅ Allowed (Draft/Computed) |
-| **HR Payroll User** | ✅ Full | ✅ Allowed | ✅ Allowed | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| **HR Manager** | ❌ 403 Forbidden | ❌ 403 Forbidden | ❌ 403 Forbidden | ❌ 403 Forbidden | ❌ 403 Forbidden |
-| **Employee** | ❌ 403 Forbidden | ❌ 403 Forbidden | ❌ 403 Forbidden | ❌ 403 Forbidden | ❌ 403 Forbidden |
-
-*(Note: Employees have access to `GET /api/payslips` scoped strictly to their own published payslips).*
-
----
-
-### 5. Frontend Pages & Currency Formatting
-- `client/src/lib/api.ts`: Added `api.payruns` and `api.payslips` API clients.
-- `client/src/pages/PayrunsPage.tsx`:
-  - Live payrun batch listing with KPI metrics tiles.
-  - Status tabs (`All`, `Draft`, `Computed`, `Validated`, `Paid`).
-  - Search filtering by payrun name.
-  - Wizard modal integration.
-- `client/src/pages/PayrunDetailPage.tsx`:
-  - State machine workflow banner with action buttons (`Compute`, `Recompute`, `Validate`, `Mark as Paid`, `Delete`).
-  - Summary KPI cards (Total Net, Total Gross, Employees, Warnings).
-  - Child payslips table with worked days, net salary, warning badges, and link to payslip document.
-- `client/src/pages/PayslipsPage.tsx`:
-  - Cross-payrun employee payslips table with search & status filters.
-- `client/src/pages/PayslipDetailPage.tsx`:
-  - Official printable payslip document formatted in Indian Rupee (`₹` / INR).
-  - Attendance days & contract base wage.
-  - Categorized breakdown (`BASIC`, `ALLOWANCE`, `DEDUCTION`, Gross, and Net).
-  - Advisory warning alerts.
-  - Browser print / PDF export support (`window.print()`).
+### 2. Frontend Interface (`client/src/pages/PayrollDashboard.tsx`)
+Redesigned to match the provided architectural wireframe mockup precisely:
+- **Filters Bar**:
+  - Period selector (e.g., `Sep 2026`, `Aug 2026`, `Jul 2026`...).
+  - Department dropdown (populated live from `/api/departments`).
+  - Employee Type dropdown (`All Types`, `Full-Time`, `Part-Time`).
+  - Company badge (`Odoo Hackathon Pvt Ltd`).
+- **Row 1: Top 5 KPI Cards**:
+  - `Total Net Salary Paid` (formatted in `₹` / Lakhs with trend percentage).
+  - `Payslips Generated` (with paid and pending count).
+  - `Avg Salary / Employee` (based on current payrun).
+  - `Approved Time Off Days` (across selected period).
+  - `Attendance Health` (percentage of present / reviewed records).
+- **Row 2: Interactive Visualizations (3 Cards)**:
+  - **Salary Cost by Department**: Clean SVG bar chart with departmental labels and `₹` totals above bars.
+  - **Monthly Net Salary Trend**: 6-month SVG line & area curve chart with data points and axis labels.
+  - **Payslip Status & Payroll Alerts**: Stacked horizontal status split bar (`Paid`, `Validated`, `Computed`, `Draft`) + live alerts list.
+- **Row 3: Detailed Breakdowns (4 Cards)**:
+  - **Attendance Overview**: Present/Late/Absent/Overtime pills, missing checkouts, manual edits, and coverage %.
+  - **Time Off Overview**: Table by leave type with Approved, Pending, and Remaining balance.
+  - **Department Overview**: Table of departments with active Headcount and Monthly Salary.
+  - **Models to Aggregate Card**: Summary callout highlighting the multi-model data fusion.
+- **HR Manager Privacy Notice**:
+  - Displays a clean notice banner when logged in as HR Manager explaining that salary figures are restricted per security policy.
 
 ---
 
 ## Verification & Test Results
 
-### 1. Backend Automated Integration Tests
-- **Command**: `node tests/payruns.test.js`
-- **Result**: **13/13 test cases passing** (Zero failures).
-- **Existing Suites**:
-  - `node tests/salary.test.js`: **13/13 test cases passing**.
-  - `node tests/contracts.test.js`: **12/12 test cases passing**.
+### 1. Automated Test Suites (All Passing: 49/49)
+- **`node tests/dashboard.test.js`**: **11/11 tests passing**
+  - Authenticates all roles.
+  - Strict RBAC: Employee is blocked (`403 Forbidden`).
+  - Admin & Payroll roles receive complete multi-model payload with live numbers.
+  - HR Manager receives HR metrics with salary numbers redacted.
+  - Period and Department filters verified.
+  - Live alerts, attendance signals, time off overview, and department table verified.
+- **`node tests/payruns.test.js`**: **13/13 tests passing**
+- **`node tests/salary.test.js`**: **13/13 tests passing**
+- **`node tests/contracts.test.js`**: **12/12 tests passing**
 
-### 2. Frontend Production Build Verification
-- **Command**: `npm run build` in `client/`
-- **Result**: Built successfully in 4.65s with zero TypeScript compilation errors.
+### 2. Frontend Production Build
+- **`npm run build`**: **Compiled successfully in 9.86s with zero TypeScript or bundling errors**.

@@ -593,6 +593,20 @@ class ApiClient {
 
     getById: async (id: string) => this.request<any>(`/payslips/${id}`),
   };
+
+  // ==========================================
+  // DASHBOARD MODULE
+  // ==========================================
+  dashboard = {
+    get: async (params?: { period?: string; departmentId?: string; employeeType?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.period) q.append('period', params.period);
+      if (params?.departmentId) q.append('departmentId', params.departmentId);
+      if (params?.employeeType) q.append('employeeType', params.employeeType);
+      const query = q.toString();
+      return this.request<any>(`/dashboard${query ? `?${query}` : ''}`);
+    },
+  };
 }
 
 export const api = new ApiClient();

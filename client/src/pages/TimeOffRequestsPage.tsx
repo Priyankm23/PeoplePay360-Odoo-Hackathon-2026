@@ -44,7 +44,7 @@ export function TimeOffRequestsPage({ onNavigate, employeeId }: TimeOffRequestsP
             className={cn(
               'px-4 py-1.5 text-sm font-medium rounded-sm-md border transition-colors',
               activeSubTab === tab.key
-                ? 'border-ink-900 bg-ink-900 text-white'
+                ? 'border-sidebar-bg bg-sidebar-bg text-white'
                 : 'border-border bg-surface text-ink-500 hover:border-ink-300'
             )}
           >

@@ -77,6 +77,7 @@ const attendanceRoutes = require('./modules/attendance/attendance.routes');
 const contractRoutes = require('./modules/contract/contract.routes');
 const { structuresRouter, rulesRouter } = require('./modules/salary/salary.routes');
 const { payrunsRouter, payslipsRouter } = require('./modules/payrun/payrun.routes');
+const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
 
 app.use(['/api/v1/auth', '/api/auth'], authRoutes);
 app.use(['/api/v1/employees', '/api/employees'], employeeRoutes);
@@ -89,6 +90,7 @@ app.use(['/api/v1/salary-structures', '/api/salary-structures'], structuresRoute
 app.use(['/api/v1/salary-rules', '/api/salary-rules'], rulesRouter);
 app.use(['/api/v1/payruns', '/api/payruns'], payrunsRouter);
 app.use(['/api/v1/payslips', '/api/payslips'], payslipsRouter);
+app.use(['/api/v1/dashboard', '/api/dashboard'], dashboardRoutes);
 
 // Global Error Handling
 app.use(notFound);

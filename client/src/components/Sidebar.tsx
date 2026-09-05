@@ -55,6 +55,7 @@ function getNavItems(role?: UserRole): (NavItem | NavGroup)[] {
   }
 
   const items: (NavItem | NavGroup)[] = [
+    { label: 'Dashboard', icon: LayoutDashboard, view: 'payroll-dashboard' },
     {
       label: 'Employees',
       icon: Users,
@@ -79,14 +80,13 @@ function getNavItems(role?: UserRole): (NavItem | NavGroup)[] {
     },
   ];
 
-  // HR Manager has NO payroll access per PDF §3 & ia (2).md §1
+  // HR Manager has NO payroll execution/config access per PDF §3 & ia (2).md §1
   if (role !== 'HR Manager') {
     items.push({
       label: 'Payroll',
       icon: Wallet,
       defaultOpen: true,
       items: [
-        { label: 'Dashboard', icon: LayoutDashboard, view: 'payroll-dashboard' },
         { label: 'Payruns', icon: Receipt, view: 'payruns' },
         { label: 'Payslips', icon: FileText, view: 'payslips' },
         { label: 'Salary Structures', icon: Settings2, view: 'salary-structures' },
@@ -133,9 +133,11 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
   return (
     <aside
       className={cn(
-        'h-screen sticky top-0 bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 transition-all duration-200',
+        'h-screen sticky top-0 flex flex-col shrink-0 transition-all duration-200',
+        'bg-sidebar-gradient border-r border-sidebar-border',
         collapsed ? 'w-16' : 'w-56'
       )}
+      style={{ background: 'linear-gradient(180deg, #1A2E24 0%, #152618 100%)' }}
     >
       {/* Logo */}
       <div className="h-14 flex items-center gap-2.5 px-4 border-b border-sidebar-border shrink-0">
@@ -144,8 +146,8 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
         </div>
         {!collapsed && (
           <div className="leading-none">
-            <div className="text-sm font-semibold text-ink-900">PeoplePay360</div>
-            <div className="text-[10px] text-ink-500 mt-0.5">HR & Payroll</div>
+            <div className="text-sm font-bold text-sidebar-textStrong tracking-tight">PeoplePay<span className="text-chartreuse-300">360</span></div>
+            <div className="text-[10px] text-sidebar-textMuted mt-0.5 tracking-wide uppercase font-medium">HR & Payroll</div>
           </div>
         )}
       </div>
@@ -174,13 +176,15 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
                   onMouseEnter={() => collapsed && setCollapsed(false)}
                   className={cn(
                     'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm-md text-sm transition-colors',
-                    active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900 hover:bg-paper/60'
+                    active
+                      ? 'text-sidebar-textStrong'
+                      : 'text-white/80 hover:text-white hover:bg-sidebar-hover'
                   )}
                 >
                   <Icon size={16} className="shrink-0" />
                   {!collapsed && (
                     <>
-                      <span className="flex-1 text-left">{item.label}</span>
+                      <span className="flex-1 text-left font-medium">{item.label}</span>
                       {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </>
                   )}
@@ -197,14 +201,14 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
                           className={cn(
                             'w-full flex items-center gap-2.5 pl-7 pr-2.5 py-1.5 rounded-sm-md text-sm transition-colors relative',
                             active
-                              ? 'bg-chartreuse-50 text-ink-900 font-medium'
-                              : 'text-ink-500 hover:text-ink-900 hover:bg-paper/60'
+                              ? 'bg-sidebar-active text-sidebar-textStrong font-semibold'
+                              : 'text-white/80 hover:text-white hover:bg-sidebar-hover'
                           )}
                         >
                           {active && (
-                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-chartreuse-500 rounded-r-full" />
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gold-400 rounded-r-full" />
                           )}
-                          <SubIcon size={14} className="shrink-0 opacity-60" />
+                          <SubIcon size={14} className="shrink-0 opacity-70" />
                           <span>{sub.label}</span>
                         </button>
                       );
@@ -224,12 +228,12 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
               className={cn(
                 'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm-md text-sm transition-colors relative mb-0.5',
                 active
-                  ? 'bg-chartreuse-50 text-ink-900 font-medium'
-                  : 'text-ink-500 hover:text-ink-900 hover:bg-paper/60'
+                  ? 'bg-sidebar-active text-sidebar-textStrong font-semibold'
+                  : 'text-white/80 hover:text-white hover:bg-sidebar-hover'
               )}
             >
               {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-chartreuse-500 rounded-r-full" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gold-400 rounded-r-full" />
               )}
               <Icon size={16} className="shrink-0" />
               {!collapsed && <span>{item.label}</span>}
@@ -241,21 +245,21 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
       {/* User profile & Logout */}
       {userSession && (
         <div className="border-t border-sidebar-border p-2 shrink-0">
-          <div className={cn('flex items-center gap-2 px-2 py-1.5 rounded-sm-md bg-paper/70', collapsed && 'justify-center px-0')}>
-            <div className="w-6 h-6 rounded-full bg-ink-900 text-chartreuse-300 font-semibold text-[11px] flex items-center justify-center shrink-0">
+          <div className={cn('flex items-center gap-2 px-2 py-1.5 rounded-sm-md bg-sidebar-hover', collapsed && 'justify-center px-0')}>
+            <div className="w-7 h-7 rounded-full bg-ink-900 text-chartreuse-300 font-bold text-[11px] flex items-center justify-center shrink-0">
               {userSession.name.charAt(0)}
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-ink-900 truncate">{userSession.name}</div>
-                <div className="text-[10px] text-ink-500 truncate">{userSession.role}</div>
+                <div className="text-xs font-semibold text-sidebar-textStrong truncate">{userSession.name}</div>
+                <div className="text-[10px] text-sidebar-textMuted truncate">{userSession.role}</div>
               </div>
             )}
             {onLogout && !collapsed && (
               <button
                 onClick={onLogout}
                 title="Log Out to Landing"
-                className="p-1 rounded text-ink-500 hover:text-status-danger hover:bg-status-dangerSoft transition-colors ml-auto"
+                className="p-1 rounded text-sidebar-textMuted hover:text-red-300 hover:bg-red-900/30 transition-colors ml-auto"
               >
                 <LogOut size={14} />
               </button>
@@ -268,7 +272,7 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
       <div className="border-t border-sidebar-border p-2 shrink-0">
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-sm-md text-xs text-ink-500 hover:text-ink-900 hover:bg-paper/60 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-sm-md text-xs text-white/60 hover:text-white hover:bg-sidebar-hover transition-colors"
         >
           {collapsed ? <ChevronRight size={14} /> : <><ChevronDown size={14} /> Collapse</>}
         </button>

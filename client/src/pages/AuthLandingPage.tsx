@@ -205,7 +205,7 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
               const preset = DEMO_PRESETS[1];
               handleSelectPreset(preset);
             }}
-            className="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-ink-900 text-white hover:bg-ink-700 transition-all shadow-sm active:scale-95"
+            className="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-sidebar-bg text-white hover:bg-sidebar-hover transition-all shadow-sm active:scale-95"
           >
             Quick Sign In
           </button>
@@ -483,7 +483,7 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 px-5 rounded-xl bg-ink-900 hover:bg-ink-700 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-md shadow-ink-900/15 hover:shadow-lg active:scale-[0.99] disabled:opacity-50 mt-3"
+                  className="w-full py-3 px-5 rounded-xl bg-sidebar-bg hover:bg-sidebar-hover text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-md shadow-sidebar-bg/15 hover:shadow-lg active:scale-[0.99] disabled:opacity-50 mt-3"
                 >
                   {isLoading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

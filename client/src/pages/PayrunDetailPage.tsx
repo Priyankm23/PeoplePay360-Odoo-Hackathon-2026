@@ -289,7 +289,7 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
                     className={cn(
                       'px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors',
                       isPast && 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-                      isCurrent && 'bg-ink-900 text-white shadow-xs',
+                      isCurrent && 'bg-sidebar-bg text-white shadow-xs',
                       !isPast && !isCurrent && 'bg-paper text-ink-400'
                     )}
                   >

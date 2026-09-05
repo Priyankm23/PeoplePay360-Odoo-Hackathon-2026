@@ -27,7 +27,7 @@ export function Button({
     md: 'text-sm px-4 py-2',
   };
   const variants = {
-    primary: 'bg-ink-900 text-chartreuse-300 hover:bg-ink-700',
+    primary: 'bg-sidebar-bg text-white hover:bg-sidebar-hover',
     outline: 'border border-border bg-surface text-ink-900 hover:bg-paper',
     ghost: 'text-ink-700 hover:bg-paper',
     danger: 'bg-status-danger text-white hover:opacity-90',
