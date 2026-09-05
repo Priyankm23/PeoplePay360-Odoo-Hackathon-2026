@@ -1,0 +1,7 @@
+# Modules
+This directory will contain feature-based modules (e.g. auth, orders, inventory) once the hackathon problem statement arrives.
+Each module should follow the structure:
+- <feature>.controller.js
+- <feature>.service.js
+- <feature>.routes.js
+- <feature>.validation.js
