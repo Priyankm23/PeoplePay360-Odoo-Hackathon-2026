@@ -17,7 +17,7 @@ const createEmployeeSchema = z.object({
   profileImageUrl: z.string().url('Invalid image URL').optional().nullable(),
 
   // User account provisioning options
-  issueLogin: z.boolean().default(false),
+  issueLogin: z.preprocess((value) => value === 'true' || value === true, z.boolean()).default(false),
   role: RoleEnum.optional(),
   password: z.string().min(8, 'Password must be at least 8 characters long').optional(),
 });

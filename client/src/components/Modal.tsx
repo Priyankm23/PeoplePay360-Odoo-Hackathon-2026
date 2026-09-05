@@ -31,14 +31,14 @@ export function Modal({ open, onClose, title, subtitle, children, footer, width 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[10vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[5vh] pb-6 sm:pt-[8vh]">
       <div
         className="absolute inset-0 bg-ink-900/20 backdrop-blur-[1px]"
         onClick={onClose}
       />
       <div
         className={cn(
-          'relative bg-surface border border-border rounded-lg shadow-pop w-full',
+          'relative flex max-h-[90vh] w-full flex-col overflow-hidden bg-surface border border-border rounded-lg shadow-pop',
           widths[width]
         )}
       >
@@ -54,7 +54,7 @@ export function Modal({ open, onClose, title, subtitle, children, footer, width 
             <X size={18} />
           </button>
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer && (
           <div className="px-6 py-4 border-t border-border-soft flex items-center justify-end gap-3">
             {footer}

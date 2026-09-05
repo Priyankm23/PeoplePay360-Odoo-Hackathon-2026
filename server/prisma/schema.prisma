@@ -114,11 +114,29 @@ model User {
 
   correctedAttendances    Attendance[]     @relation("AttendanceCorrections")
   approvedTimeOffRequests TimeOffRequest[] @relation("ApprovedTimeOffRequests")
+  auditLogs               AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  action    String
+  entity    String
+  entityId  String?
+  actorId   String?  @db.Uuid
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model Department {
@@ -218,6 +236,7 @@ model ScheduleLine {
 
 model Contract {
   id                String          @id @default(uuid()) @db.Uuid
+  reference         String?         @unique
   employeeId        String          @db.Uuid
   employee          Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   departmentId      String?         @db.Uuid

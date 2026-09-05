@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../../config/prisma');
 const { ApiError } = require('../../utils/apiResponse');
+const { recordAudit } = require('../../utils/audit');
+const { sendInitialAccessEmail } = require('../../utils/mailer');
+const crypto = require('crypto');
 
 class EmployeeService {
   /**
@@ -41,7 +44,7 @@ class EmployeeService {
       department: { select: { id: true, name: true } },
       jobPosition: { select: { id: true, title: true } },
       workingSchedule: { select: { id: true, name: true, type: true } },
-      manager: { select: { id: true, firstName: true, lastName: true } },
+      manager: { select: { id: true, firstName: true, lastName: true, profileImageUrl: true } },
       user: { select: { id: true, role: true } },
     };
 
@@ -120,7 +123,7 @@ class EmployeeService {
             },
           },
         },
-        manager: { select: { id: true, firstName: true, lastName: true, email: true } },
+        manager: { select: { id: true, firstName: true, lastName: true, email: true, profileImageUrl: true } },
         user: { select: { id: true, role: true } },
       },
     });
@@ -206,8 +209,9 @@ class EmployeeService {
 
     // 3. Handle login issuance rules
     let initialCredentials = null;
+    let emailCredentials = null;
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Create Employee
       const employee = await tx.employee.create({
         data: {
@@ -238,12 +242,10 @@ class EmployeeService {
           assignedRole = data.role;
         }
 
-        // Generate password if not supplied (Enterprise convention: PeoplePay@2026_000X)
+        // Generate a random password when the administrator does not provide one.
         let rawPassword = data.password;
         if (!rawPassword) {
-          const totalUsers = await tx.user.count();
-          const seq = String(totalUsers + 1).padStart(4, '0');
-          rawPassword = `PeoplePay@2026_${seq}`;
+          rawPassword = crypto.randomBytes(18).toString('base64url');
         }
 
         const passwordHash = await bcrypt.hash(rawPassword, 10);
@@ -261,16 +263,43 @@ class EmployeeService {
           userId: user.id,
           email: user.email,
           role: user.role,
-          temporaryPassword: rawPassword,
-          deliveryNote: 'Credentials dispatched to provisioning queue',
+          credentialsIssued: true,
+          deliveryNote: 'Initial access details were sent to the employee email address.',
         };
+        emailCredentials = { email: user.email, password: rawPassword };
       }
+
+      await recordAudit({
+        client: tx,
+        actorId: callerUser.id,
+        action: 'CREATE',
+        entity: 'Employee',
+        entityId: employee.id,
+        metadata: { issueLogin: Boolean(data.issueLogin) },
+      });
 
       return {
         employee,
         initialCredentials,
       };
     });
+
+    if (emailCredentials) {
+      try {
+        await sendInitialAccessEmail(emailCredentials);
+      } catch (error) {
+        console.error(`[EMAIL] Initial access delivery failed for ${emailCredentials.email}:`, error.message);
+        result.initialCredentials = {
+          userId: result.initialCredentials.userId,
+          email: result.initialCredentials.email,
+          role: result.initialCredentials.role,
+          credentialsIssued: true,
+          deliveryNote: 'Account created, but email delivery failed. Use a secure administrator reset process.',
+        };
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -323,6 +352,14 @@ class EmployeeService {
       },
     });
 
+    await recordAudit({
+      actorId: callerUser.id,
+      action: 'UPDATE',
+      entity: 'Employee',
+      entityId: id,
+      metadata: { fields: Object.keys(data) },
+    });
+
     return updated;
   }
 
@@ -342,6 +379,8 @@ class EmployeeService {
       where: { id },
       data: { isArchived: true },
     });
+
+    await recordAudit({ actorId: callerUser.id, action: 'ARCHIVE', entity: 'Employee', entityId: id });
 
     return { id, isArchived: true };
   }

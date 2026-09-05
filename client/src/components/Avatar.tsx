@@ -6,6 +6,8 @@ interface AvatarProps {
   color: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
+  imageUrl?: string | null;
+  onClick?: () => void;
 }
 
 const sizeMap = {
@@ -15,8 +17,8 @@ const sizeMap = {
   lg: 'w-16 h-16 text-lg',
 };
 
-export function Avatar({ firstName, lastName, color, size = 'sm', className }: AvatarProps) {
-  const initials = `${firstName[0]}${lastName[0]}`;
+export function Avatar({ firstName, lastName, color, size = 'sm', className, imageUrl, onClick }: AvatarProps) {
+  const initials = `${firstName[0] || ''}${lastName[0] || ''}`;
   return (
     <div
       className={cn(
@@ -25,8 +27,12 @@ export function Avatar({ firstName, lastName, color, size = 'sm', className }: A
         className
       )}
       style={{ backgroundColor: color }}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (event) => event.key === 'Enter' && onClick() : undefined}
     >
-      {initials}
+      {imageUrl ? <img src={imageUrl} alt={`${firstName} ${lastName}`} className="w-full h-full object-cover rounded-full" /> : initials}
     </div>
   );
 }

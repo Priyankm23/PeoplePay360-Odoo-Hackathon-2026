@@ -86,7 +86,6 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
   const [email, setEmail] = useState('hrmanager@demo.com');
   const [password, setPassword] = useState('Password123!');
   const [role, setRole] = useState<UserRole>('HR Manager');
-  const [department, setDepartment] = useState('Human Resources');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -129,7 +128,7 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
         name: employeeName,
         role: userRole,
         employeeId: result.user.employeeId,
-        department: result.user.employee?.department?.name || department,
+        department: result.user.employee?.department?.name,
         avatarColor: 'bg-chartreuse-500',
       });
     } catch (err: any) {
@@ -454,38 +453,6 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-ink-900 mb-1.5">Role Scope</label>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as UserRole)}
-                      className="w-full px-3 pr-10 py-2.5 text-sm bg-white border border-[#DADDD9] rounded-xl text-ink-900 font-medium focus:outline-none focus:border-ink-900 transition-all"
-                    >
-                      <option value="Admin">Admin</option>
-                      <option value="HR Payroll Manager">HR Payroll Manager</option>
-                      <option value="HR Manager">HR Manager</option>
-                      <option value="HR Payroll User">HR Payroll User</option>
-                      <option value="Employee">Employee</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-ink-900 mb-1.5">Department</label>
-                    <select
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full px-3 pr-10 py-2.5 text-sm bg-white border border-[#DADDD9] rounded-xl text-ink-900 font-medium focus:outline-none focus:border-ink-900 transition-all"
-                    >
-                      <option value="Finance">Finance</option>
-                      <option value="Engineering">Engineering</option>
-                      <option value="Human Resources">Human Resources</option>
-                      <option value="Sales">Sales</option>
-                      <option value="Operations">Operations</option>
-                    </select>
                   </div>
                 </div>
 

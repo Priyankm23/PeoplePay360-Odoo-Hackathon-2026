@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, List, LayoutGrid, Filter, Copy, Check, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Filter, ShieldCheck, RefreshCw } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
@@ -23,6 +23,7 @@ interface EmployeeItem {
   phone?: string | null;
   bankAccount?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+  profileImageUrl?: string | null;
   createdAt: string;
   department?: { id: string; name: string } | null;
   jobPosition?: { id: string; title: string } | null;
@@ -74,6 +75,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [bankAccount, setBankAccount] = useState('');
+  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [departmentId, setDepartmentId] = useState('');
   const [jobPositionId, setJobPositionId] = useState('');
   const [managerId, setManagerId] = useState('');
@@ -84,9 +86,9 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
   const [provisionedCreds, setProvisionedCreds] = useState<{
     email: string;
     role: string;
-    temporaryPassword?: string;
+    credentialsIssued: boolean;
+    deliveryNote: string;
   } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Fetch employees and lookups
   const fetchData = async () => {
@@ -149,6 +151,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
         email: email.trim().toLowerCase(),
         phone: phone.trim() || undefined,
         bankAccount: bankAccount.trim() || undefined,
+        image: profileImage || undefined,
         departmentId: departmentId || undefined,
         jobPositionId: jobPositionId || undefined,
         managerId: managerId || undefined,
@@ -162,6 +165,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
       setEmail('');
       setPhone('');
       setBankAccount('');
+      setProfileImage(null);
       setDepartmentId('');
       setJobPositionId('');
       setManagerId('');
@@ -174,7 +178,8 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
         setProvisionedCreds({
           email: result.initialCredentials.email,
           role: result.initialCredentials.role,
-          temporaryPassword: result.initialCredentials.temporaryPassword,
+          credentialsIssued: result.initialCredentials.credentialsIssued,
+          deliveryNote: result.initialCredentials.deliveryNote,
         });
       }
 
@@ -183,14 +188,6 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
       setFormError(err.message || 'Failed to create employee');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const copyPassword = () => {
-    if (provisionedCreds?.temporaryPassword) {
-      navigator.clipboard.writeText(provisionedCreds.temporaryPassword);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -334,14 +331,14 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
           <p className="text-sm text-ink-400">No employees match the selected criteria.</p>
         </div>
       ) : viewMode === 'list' ? (
-        <Table>
+        <Table className="[&>table]:table-fixed">
           <THead>
-            <TH>Employee</TH>
-            <TH>Department</TH>
-            <TH>Job Position</TH>
-            <TH>Manager</TH>
-            <TH>Role</TH>
-            <TH>Status</TH>
+            <TH className="w-[27%]">Employee</TH>
+            <TH className="w-[17%]">Department</TH>
+            <TH className="w-[20%]">Job Position</TH>
+            <TH className="w-[16%]">Manager</TH>
+            <TH className="w-[12%]">Role</TH>
+            <TH className="w-[8%]" align="center">Status</TH>
           </THead>
           <TBody>
             {employees.map((emp) => (
@@ -351,7 +348,8 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
                     <Avatar
                       firstName={emp.firstName}
                       lastName={emp.lastName}
-                      color="bg-emerald-600"
+                      color="#059669"
+                      imageUrl={emp.profileImageUrl}
                       size="sm"
                     />
                     <div>
@@ -382,7 +380,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
                     <span className="text-[11px] text-ink-400">No Login</span>
                   )}
                 </TD>
-                <TD>
+                <TD align="center">
                   <StatusDot type={emp.status === 'ACTIVE' ? 'active' : 'inactive'} />
                 </TD>
               </TR>
@@ -413,7 +411,8 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
                         <Avatar
                           firstName={emp.firstName}
                           lastName={emp.lastName}
-                          color="bg-emerald-600"
+                          color="#059669"
+                          imageUrl={emp?.profileImageUrl}
                           size="sm"
                         />
                         <div className="min-w-0">
@@ -502,6 +501,19 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
               className="w-full px-3 py-2 text-sm border border-border rounded-sm-md focus:outline-none focus:border-ink-400 bg-surface"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+              Profile Image
+            </label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => setProfileImage(e.target.files?.[0] || null)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-sm-md bg-surface file:mr-3 file:border-0 file:bg-transparent file:text-xs file:font-semibold"
+            />
+            <p className="mt-1 text-[11px] text-ink-400">JPEG, PNG, or WebP up to 5 MB.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -657,7 +669,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
               <div>
                 <h4 className="text-sm font-semibold">User Account Successfully Provisioned</h4>
                 <p className="text-xs text-emerald-700 mt-1">
-                  The employee can now log in using these temporary credentials. Please share them with the employee.
+                  The account is ready. The initial password has been mailed to the employee's email address.
                 </p>
               </div>
             </div>
@@ -672,19 +684,8 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
                 <span className="font-semibold text-emerald-800">{provisionedCreds.role}</span>
               </div>
               <div className="flex justify-between items-center text-xs pt-2 border-t border-border-soft">
-                <span className="text-ink-500">Temporary Password:</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-sm text-ink-900 bg-white px-2 py-0.5 rounded border border-border">
-                    {provisionedCreds.temporaryPassword}
-                  </span>
-                  <button
-                    onClick={copyPassword}
-                    className="p-1 rounded hover:bg-surface text-ink-600 hover:text-ink-900 transition-colors"
-                    title="Copy Password"
-                  >
-                    {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
-                  </button>
-                </div>
+                <span className="text-ink-500">Password:</span>
+                <span className="font-semibold text-emerald-800">Mailed to employee email</span>
               </div>
             </div>
 

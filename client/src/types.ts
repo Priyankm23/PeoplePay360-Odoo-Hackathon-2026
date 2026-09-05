@@ -30,6 +30,7 @@ export type ContractStatus = 'running' | 'draft' | 'expired' | 'cancelled';
 
 export interface Contract {
   id: string;
+  reference?: string;
   employeeId: string;
   startDate: string;
   endDate: string | null;

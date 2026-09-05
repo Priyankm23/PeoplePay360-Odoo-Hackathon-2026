@@ -20,13 +20,22 @@ class ApiClient {
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
+    const isFormData = options.body instanceof FormData;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...((options.headers as Record<string, string>) || {}),
     };
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const csrfCookie = document.cookie
+      .split('; ')
+      .find((cookie) => cookie.startsWith('csrfToken='))
+      ?.split('=')[1];
+    if (csrfCookie && options.method && !['GET', 'HEAD', 'OPTIONS'].includes(options.method.toUpperCase())) {
+      headers['X-CSRF-Token'] = decodeURIComponent(csrfCookie);
     }
 
     const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
@@ -164,10 +173,11 @@ class ApiClient {
       issueLogin?: boolean;
       role?: string;
       password?: string;
+      image?: File;
     }) => {
       return await this.request<any>('/employees', {
         method: 'POST',
-        body: JSON.stringify(data),
+      body: data.image ? (() => { const form = new FormData(); Object.entries(data).forEach(([key, value]) => value !== undefined && value !== null && form.append(key, value instanceof File ? value : String(value))); return form; })() : JSON.stringify(data),
       });
     },
 
@@ -338,6 +348,77 @@ class ApiClient {
       this.request<any>(`/attendance/${id}/correct`, {
         method: 'PATCH',
         body: JSON.stringify(data),
+      }),
+  };
+
+  // ==========================================
+  // CONTRACTS MODULE
+  // ==========================================
+  contracts = {
+    getAll: async (params?: { employeeId?: string; status?: string; search?: string }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.employeeId) searchParams.set('employeeId', params.employeeId);
+      if (params?.status && params.status !== 'ALL') searchParams.set('status', params.status);
+      if (params?.search) searchParams.set('search', params.search);
+
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/contracts?${queryString}` : '/contracts';
+      return this.request<any[]>(endpoint);
+    },
+
+    getById: async (id: string) => this.request<any>(`/contracts/${id}`),
+
+    getLookupOptions: async () =>
+      this.request<{
+        salaryStructures: Array<{ id: string; name: string; isActive: boolean }>;
+        workingSchedules: Array<{ id: string; name: string; type: string }>;
+      }>('/contracts/meta/lookup'),
+
+    create: async (data: {
+      employeeId: string;
+      departmentId?: string | null;
+      jobPositionId?: string | null;
+      workingScheduleId?: string | null;
+      salaryStructureId: string;
+      startDate: string;
+      endDate?: string | null;
+      wage: number;
+    }) =>
+      this.request<any>('/contracts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: async (
+      id: string,
+      data: {
+        departmentId?: string | null;
+        jobPositionId?: string | null;
+        workingScheduleId?: string | null;
+        salaryStructureId?: string;
+        startDate?: string;
+        endDate?: string | null;
+        wage?: number;
+      }
+    ) =>
+      this.request<any>(`/contracts/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    activate: async (id: string) =>
+      this.request<any>(`/contracts/${id}/activate`, {
+        method: 'PATCH',
+      }),
+
+    cancel: async (id: string) =>
+      this.request<any>(`/contracts/${id}/cancel`, {
+        method: 'PATCH',
+      }),
+
+    archive: async (id: string) =>
+      this.request<any>(`/contracts/${id}`, {
+        method: 'DELETE',
       }),
   };
 }

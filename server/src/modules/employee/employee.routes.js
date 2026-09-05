@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const employeeController = require('./employee.controller');
 const { authenticate, authorize } = require('../../middleware/auth.middleware');
+const { employeeImageUpload, uploadEmployeeImage } = require('../../middleware/upload.middleware');
 
 const router = Router();
 
@@ -12,8 +13,8 @@ router.get('/', employeeController.getEmployees);
 router.get('/:id', employeeController.getEmployeeById);
 
 // Write routes: Admin and HR Manager only
-router.post('/', authorize('ADMIN', 'HR_MANAGER'), employeeController.createEmployee);
-router.patch('/:id', authorize('ADMIN', 'HR_MANAGER'), employeeController.updateEmployee);
+router.post('/', authorize('ADMIN', 'HR_MANAGER'), employeeImageUpload, uploadEmployeeImage, employeeController.createEmployee);
+router.patch('/:id', authorize('ADMIN', 'HR_MANAGER'), employeeImageUpload, uploadEmployeeImage, employeeController.updateEmployee);
 router.delete('/:id', authorize('ADMIN', 'HR_MANAGER'), employeeController.archiveEmployee);
 
 module.exports = router;

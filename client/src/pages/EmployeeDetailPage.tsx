@@ -11,6 +11,8 @@ import {
   Trash2,
   ExternalLink,
   Clock,
+  Plus,
+  FileText,
 } from 'lucide-react';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
@@ -35,6 +37,7 @@ interface EmployeeDetailRecord {
   phone?: string | null;
   bankAccount?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+  profileImageUrl?: string | null;
   createdAt: string;
   departmentId?: string | null;
   jobPositionId?: string | null;
@@ -53,7 +56,7 @@ interface EmployeeDetailRecord {
       breakMinutes: number;
     }>;
   } | null;
-  manager?: { id: string; firstName: string; lastName: string; email?: string } | null;
+  manager?: { id: string; firstName: string; lastName: string; email?: string; profileImageUrl?: string | null } | null;
   user?: { id: string; role: string } | null;
   counts: {
     contracts: number;
@@ -78,7 +81,12 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
 
   // RBAC permissions
   const isSelf = userSession?.role === 'Employee';
-  const canManage = userSession?.role === 'Admin' || userSession?.role === 'HR Manager';
+  const roleStr = (userSession?.role || '').toUpperCase().replace(/\s+/g, '_');
+  const canManage =
+    roleStr === 'ADMIN' ||
+    roleStr === 'HR_MANAGER' ||
+    userSession?.role === 'Admin' ||
+    userSession?.role === 'HR Manager';
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -272,6 +280,8 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 firstName={employee.firstName}
                 lastName={employee.lastName}
                 color="bg-emerald-600"
+                imageUrl={employee.profileImageUrl}
+                onClick={employee.profileImageUrl ? () => window.open(employee.profileImageUrl || '', '_blank', 'noopener,noreferrer') : undefined}
                 size="lg"
               />
               <h2 className="text-base font-bold mt-3 text-ink-900">
@@ -351,6 +361,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                     firstName={employee.manager.firstName}
                     lastName={employee.manager.lastName}
                     color="bg-ink-700"
+                    imageUrl={employee.manager.profileImageUrl}
                     size="sm"
                   />
                   <div>
@@ -458,26 +469,50 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
 
           {/* Active Contract Snapshot */}
           <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
-            <h3 className="text-sm font-bold text-ink-900 mb-3 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-              Active Contract Overview
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
+                  <FileText size={16} className="text-emerald-600" />
+                  Active Contract Overview
+                </h3>
+                {employee.activeContract?.reference && (
+                  <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {employee.activeContract.reference}
+                  </span>
+                )}
+              </div>
+              {canManage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onNavigate('contracts', employee.id)}
+                  className="text-xs"
+                >
+                  <Pencil size={12} className="mr-1" />
+                  Manage / Edit Contract
+                </Button>
+              )}
+            </div>
 
             {employee.activeContract ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="p-3 bg-paper rounded border border-border">
+              <div
+                onClick={() => canManage && onNavigate('contracts', employee.id)}
+                className={`grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 ${canManage ? 'cursor-pointer group' : ''}`}
+                title={canManage ? 'Click to manage contracts for this employee' : undefined}
+              >
+                <div className="p-3 bg-paper rounded border border-border group-hover:border-emerald-300 transition-colors">
                   <span className="text-xs text-ink-400 block mb-1">Monthly Wage</span>
                   <span className="text-lg font-bold text-ink-900">
                     {formatCurrency(employee.activeContract.wage)}
                   </span>
                 </div>
-                <div className="p-3 bg-paper rounded border border-border">
+                <div className="p-3 bg-paper rounded border border-border group-hover:border-emerald-300 transition-colors">
                   <span className="text-xs text-ink-400 block mb-1">Salary Structure</span>
                   <span className="text-sm font-semibold text-ink-900">
                     {employee.activeContract.salaryStructure?.name || 'Standard Package'}
                   </span>
                 </div>
-                <div className="p-3 bg-paper rounded border border-border">
+                <div className="p-3 bg-paper rounded border border-border group-hover:border-emerald-300 transition-colors">
                   <span className="text-xs text-ink-400 block mb-1">Contract Validity</span>
                   <span className="text-xs font-semibold text-ink-900">
                     {new Date(employee.activeContract.startDate).toLocaleDateString()} —{' '}
@@ -489,9 +524,19 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
               </div>
             ) : (
               <div className="p-6 bg-paper rounded border border-dashed border-border text-center">
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-ink-400 mb-2">
                   No active running contract found for this employee.
                 </p>
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onNavigate('contracts', employee.id)}
+                  >
+                    <Plus size={13} className="mr-1" />
+                    Create Contract for Employee
+                  </Button>
+                )}
               </div>
             )}
           </div>

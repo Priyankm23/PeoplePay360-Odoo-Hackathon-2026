@@ -1,15 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 const morgan = require('morgan');
 const config = require('./config/env');
 const prisma = require('./config/prisma');
 const { notFound, errorHandler } = require('./middleware/error.middleware');
+const { csrfProtection } = require('./middleware/csrf.middleware');
 
 const app = express();
 const PORT = config.PORT;
 
 // Core Middlewares
+app.use(helmet());
 app.use(
   cors({
     origin: config.CORS_ORIGIN,
@@ -19,6 +22,7 @@ app.use(
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(cookieParser());
+app.use(csrfProtection);
 
 // Request Logging
 if (config.NODE_ENV === 'development') {
@@ -70,6 +74,7 @@ const departmentRoutes = require('./modules/department/department.routes');
 const jobPositionRoutes = require('./modules/jobPosition/jobPosition.routes');
 const workingScheduleRoutes = require('./modules/workingSchedule/workingSchedule.routes');
 const attendanceRoutes = require('./modules/attendance/attendance.routes');
+const contractRoutes = require('./modules/contract/contract.routes');
 
 app.use(['/api/v1/auth', '/api/auth'], authRoutes);
 app.use(['/api/v1/employees', '/api/employees'], employeeRoutes);
@@ -77,6 +82,7 @@ app.use(['/api/v1/departments', '/api/departments'], departmentRoutes);
 app.use(['/api/v1/job-positions', '/api/job-positions'], jobPositionRoutes);
 app.use(['/api/v1/working-schedules', '/api/working-schedules'], workingScheduleRoutes);
 app.use(['/api/v1/attendance', '/api/attendance'], attendanceRoutes);
+app.use(['/api/v1/contracts', '/api/contracts'], contractRoutes);
 
 // Global Error Handling
 app.use(notFound);

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../../config/prisma');
 const config = require('../../config/env');
 const { ApiError } = require('../../utils/apiResponse');
+const { recordAudit } = require('../../utils/audit');
 
 class AuthService {
   /**
@@ -47,6 +48,8 @@ class AuthService {
       config.JWT_SECRET,
       { expiresIn: config.JWT_EXPIRES_IN }
     );
+
+    await recordAudit({ actorId: user.id, action: 'LOGIN', entity: 'User', entityId: user.id });
 
     return {
       token,
@@ -118,6 +121,8 @@ class AuthService {
       where: { id: userId },
       data: { passwordHash: newPasswordHash },
     });
+
+    await recordAudit({ actorId: userId, action: 'CHANGE_PASSWORD', entity: 'User', entityId: userId });
 
     return { success: true };
   }

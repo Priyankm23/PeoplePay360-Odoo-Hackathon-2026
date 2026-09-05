@@ -63,7 +63,7 @@ export function App() {
   const handleLogin = (session: UserSession) => { setUserSession(session); if (session.role === 'Employee') { if (session.employeeId) setSelectedEmployeeId(session.employeeId); setCurrentView('employee-detail'); } else if (session.role === 'HR Manager') setCurrentView('employees'); else setCurrentView('payroll-dashboard'); };
   const handleLogout = async () => { try { await api.auth.logout(); } catch {} setUserSession(null); };
   const handleNavigate = (view: View, id?: string) => {
-    if (view === 'employees' && userSession?.role === 'Employee') { if (userSession.employeeId) setSelectedEmployeeId(userSession.employeeId); setCurrentView('employee-detail'); return; }
+    if ((view === 'employees' || view === 'contracts') && userSession?.role === 'Employee') { if (userSession.employeeId) setSelectedEmployeeId(userSession.employeeId); setCurrentView('employee-detail'); return; }
     if ((view === 'payroll-dashboard' || view === 'payruns' || view === 'salary-structures' || view === 'salary-rules') && userSession?.role === 'HR Manager') { setCurrentView('employees'); return; }
     setCurrentView(view);
     if (view === 'employee-detail' && id) setSelectedEmployeeId(id);
@@ -87,7 +87,7 @@ export function App() {
       case 'departments': return <DepartmentsPage onNavigate={handleNavigate} userSession={userSession} />;
       case 'job-positions': return <JobPositionsPage userSession={userSession} />;
       case 'working-schedules': return <WorkingSchedulesPage userSession={userSession} />;
-      case 'contracts': return <ContractsPage employeeId={relatedEmployeeId} />;
+      case 'contracts': return <ContractsPage employeeId={relatedEmployeeId} userSession={userSession} onNavigate={handleNavigate} />;
       case 'attendance': return <AttendancePage employeeId={relatedEmployeeId} userSession={userSession} onNavigate={handleNavigate} refreshKey={attendanceRefreshKey} />;
       case 'time-off-requests':
       case 'time-off-allocations':
@@ -126,7 +126,7 @@ export function App() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto px-8 py-6">
-          <div className="max-w-7xl w-full mx-auto">{renderView()}</div>
+          <div className="max-w-[1440px] w-full mx-auto">{renderView()}</div>
         </main>
       </div>
     </div>
