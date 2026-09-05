@@ -1,57 +1,379 @@
-import { Plus, Clock } from 'lucide-react';
-import { PageHeader } from '@/components/PageHeader';
-import { Table, THead, TH, TBody, TR, TD } from '@/components/Table';
-import { Button } from '@/components/Button';
-import { workingSchedules } from '@/data';
+import { useEffect, useState } from 'react';
+import { Plus, Clock, ArrowLeft, Trash2, Pencil } from 'lucide-react';
+import { PageHeader } from '../components/PageHeader';
+import { Button } from '../components/Button';
+import { api } from '../lib/api';
+import type { UserSession } from '../types';
 
-export function WorkingSchedulesPage() {
+interface WorkingSchedulesPageProps {
+  userSession?: UserSession | null;
+}
+
+const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+type Line = {
+  day: string;
+  startTime: string;
+  endTime: string;
+  breakMinutes: number;
+};
+
+type Schedule = {
+  id: string;
+  name: string;
+  type: 'FULL_TIME' | 'PART_TIME';
+  lines: Line[];
+  weeklyHours: number;
+  daysPerWeek: number;
+  employeeCount: number;
+};
+
+const defaultLines = (): Line[] =>
+  days.slice(0, 5).map((day) => ({
+    day,
+    startTime: '09:00',
+    endTime: '18:00',
+    breakMinutes: 60,
+  }));
+
+const hours = (line: Line) => {
+  const start = line.startTime.split(':').map(Number);
+  const end = line.endTime.split(':').map(Number);
+  return ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1]) - line.breakMinutes) / 60;
+};
+
+export function WorkingSchedulesPage({ userSession }: WorkingSchedulesPageProps) {
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [selected, setSelected] = useState<Schedule | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [type, setType] = useState<'FULL_TIME' | 'PART_TIME'>('FULL_TIME');
+  const [lines, setLines] = useState<Line[]>(defaultLines());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // RBAC: Admin and HR Manager have create/edit access
+  const roleStr = (userSession?.role || '').toUpperCase().replace(/\s+/g, '_');
+  const canManageSchedules =
+    roleStr === 'ADMIN' ||
+    roleStr === 'HR_MANAGER' ||
+    userSession?.role === 'Admin' ||
+    userSession?.role === 'HR Manager';
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      setSchedules(await api.workingSchedules.getAll());
+    } catch (err: any) {
+      setError(err.message || 'Unable to load schedules');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const openNew = () => {
+    if (!canManageSchedules) return;
+    setSelected(null);
+    setFormOpen(true);
+    setName('');
+    setType('FULL_TIME');
+    setLines(defaultLines());
+    setError(null);
+  };
+
+  const closeForm = () => {
+    setSelected(null);
+    setFormOpen(false);
+    setName('');
+    setError(null);
+  };
+
+  const openSchedule = (schedule: Schedule) => {
+    setSelected(schedule);
+    setFormOpen(true);
+    setName(schedule.name);
+    setType(schedule.type);
+    setLines(schedule.lines || []);
+    setError(null);
+  };
+
+  const updateLine = (index: number, field: keyof Line, value: string) => {
+    if (!canManageSchedules) return;
+    setLines((current) =>
+      current.map((line, i) =>
+        i === index
+          ? { ...line, [field]: field === 'breakMinutes' ? Number(value) : value }
+          : line
+      )
+    );
+  };
+
+  const addDay = () => {
+    if (!canManageSchedules) return;
+    const day = days.find((candidate) => !lines.some((line) => line.day === candidate));
+    if (day) {
+      setLines([...lines, { day, startTime: '09:00', endTime: '17:00', breakMinutes: 60 }]);
+    }
+  };
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canManageSchedules) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const result = selected
+        ? await api.workingSchedules.update(selected.id, { name, type, lines })
+        : await api.workingSchedules.create({ name, type, lines });
+      await load();
+      openSchedule(result);
+    } catch (err: any) {
+      setError(err.message || 'Unable to save schedule');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (formOpen) {
+    return (
+      <div>
+        <button
+          onClick={closeForm}
+          className="inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-ink-900 mb-4"
+        >
+          <ArrowLeft size={14} /> Back to list
+        </button>
+
+        <PageHeader
+          title={selected ? name : 'New Working Schedule'}
+          subtitle="Define the weekly working pattern"
+        />
+
+        <form onSubmit={save} className="border border-border rounded-lg bg-surface">
+          {error && (
+            <div className="m-4 p-3 rounded-md bg-red-50 border border-red-200 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 border-b border-border">
+            <label className="text-xs font-semibold text-ink-700">
+              Schedule Name
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. 40 Hours / Week"
+                disabled={!canManageSchedules}
+                className="mt-1.5 w-full px-3 py-2 text-sm border border-border rounded-sm-md bg-surface disabled:bg-paper disabled:text-ink-500"
+                required
+              />
+            </label>
+            <label className="text-xs font-semibold text-ink-700">
+              Schedule Type
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as typeof type)}
+                disabled={!canManageSchedules}
+                className="mt-1.5 w-full px-3 pr-10 py-2 text-sm border border-border rounded-sm-md bg-surface disabled:bg-paper disabled:text-ink-500"
+              >
+                <option value="FULL_TIME">Full Time</option>
+                <option value="PART_TIME">Part Time</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold">Weekly Schedule</h2>
+                <p className="text-xs text-ink-500 mt-0.5">
+                  Set working hours and breaks for each day.
+                </p>
+              </div>
+              {canManageSchedules && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDay}
+                  disabled={lines.length === 7}
+                >
+                  <Plus size={14} /> Add Day
+                </Button>
+              )}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y border-border text-left text-xs text-ink-500">
+                    <th className="py-2">Day</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Break (min)</th>
+                    <th>Hours</th>
+                    {canManageSchedules && <th />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line, index) => (
+                    <tr key={line.day} className="border-b border-border-soft">
+                      <td className="py-2 font-medium capitalize">{line.day.toLowerCase()}</td>
+                      <td>
+                        <input
+                          type="time"
+                          value={line.startTime}
+                          onChange={(e) => updateLine(index, 'startTime', e.target.value)}
+                          disabled={!canManageSchedules}
+                          className="px-2 py-1.5 border border-border rounded-sm-md text-xs disabled:bg-paper"
+                          required
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="time"
+                          value={line.endTime}
+                          onChange={(e) => updateLine(index, 'endTime', e.target.value)}
+                          disabled={!canManageSchedules}
+                          className="px-2 py-1.5 border border-border rounded-sm-md text-xs disabled:bg-paper"
+                          required
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          value={line.breakMinutes}
+                          onChange={(e) => updateLine(index, 'breakMinutes', e.target.value)}
+                          disabled={!canManageSchedules}
+                          className="w-24 px-2 py-1.5 border border-border rounded-sm-md text-xs disabled:bg-paper"
+                        />
+                      </td>
+                      <td className="tnum text-xs">{hours(line).toFixed(1)}h</td>
+                      {canManageSchedules && (
+                        <td className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => setLines(lines.filter((_, i) => i !== index))}
+                            disabled={lines.length === 1}
+                            className="text-ink-300 hover:text-status-danger disabled:opacity-30"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-8 pt-4 text-sm">
+              <span className="text-ink-500">Total Weekly Hours:</span>
+              <strong className="tnum">
+                {lines.reduce((total, line) => total + hours(line), 0).toFixed(1)}h
+              </strong>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 p-4 border-t border-border">
+            <Button type="button" variant="outline" size="md" onClick={closeForm}>
+              {canManageSchedules ? 'Cancel' : 'Back'}
+            </Button>
+            {canManageSchedules && (
+              <Button type="submit" variant="primary" size="md" disabled={saving}>
+                {saving ? 'Saving...' : selected ? 'Save Changes' : 'Create Schedule'}
+              </Button>
+            )}
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader
         title="Working Schedules"
-        subtitle={`${workingSchedules.length} schedules configured`}
+        subtitle={loading ? 'Loading schedules...' : `${schedules.length} schedules configured`}
         actions={
-          <Button variant="primary" size="md">
-            <Plus size={15} />
-            New Schedule
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="md" onClick={load} disabled={loading}>
+              <Clock size={14} /> Refresh
+            </Button>
+            {canManageSchedules && (
+              <Button variant="primary" size="md" onClick={openNew}>
+                <Plus size={15} /> New Schedule
+              </Button>
+            )}
+          </div>
         }
       />
-      <Table>
-        <THead>
-          <TH>Schedule Name</TH>
-          <TH align="right">Hours/Week</TH>
-          <TH align="right">Days/Week</TH>
-          <TH>Start Time</TH>
-          <TH>End Time</TH>
-          <TH>Flexible</TH>
-          <TH align="right">Employees</TH>
-        </THead>
-        <TBody>
-          {workingSchedules.map((ws) => (
-            <TR key={ws.id}>
-              <TD>
-                <div className="flex items-center gap-2">
-                  <Clock size={15} className="text-ink-300" />
-                  <span className="font-medium">{ws.name}</span>
-                </div>
-              </TD>
-              <TD align="right" className="tnum">{ws.hoursPerWeek}h</TD>
-              <TD align="right" className="tnum">{ws.daysPerWeek}</TD>
-              <TD className="tnum text-ink-700">{ws.startTime}</TD>
-              <TD className="tnum text-ink-700">{ws.endTime}</TD>
-              <TD>
-                {ws.flexible ? (
-                  <span className="text-xs text-status-success">Yes</span>
-                ) : (
-                  <span className="text-xs text-ink-500">No</span>
-                )}
-              </TD>
-              <TD align="right" className="tnum">{ws.employeeCount}</TD>
-            </TR>
-          ))}
-        </TBody>
-      </Table>
+
+      {error && (
+        <div className="p-3 mb-4 rounded-md bg-red-50 border border-red-200 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-paper border-b border-border text-left text-xs text-ink-500">
+              <th className="px-4 py-3">Schedule Name</th>
+              <th className="px-4 py-3">Days / Week</th>
+              <th className="px-4 py-3">Hours / Week</th>
+              <th className="px-4 py-3">Employees</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedules.map((schedule) => (
+              <tr
+                key={schedule.id}
+                onClick={() => openSchedule(schedule)}
+                className="border-b border-border-soft hover:bg-paper/60 cursor-pointer"
+              >
+                <td className="px-4 py-3 font-medium">
+                  <span className="inline-flex items-center gap-2">
+                    <Clock size={15} className="text-ink-300" />
+                    {schedule.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3">{schedule.daysPerWeek}</td>
+                <td className="px-4 py-3 tnum">{schedule.weeklyHours.toFixed(1)}h</td>
+                <td className="px-4 py-3">{schedule.employeeCount}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs text-status-success">Active</span>
+                </td>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => openSchedule(schedule)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-ink-700 hover:text-ink-900 hover:bg-paper border border-border transition-colors"
+                    title={canManageSchedules ? 'Edit Working Schedule' : 'View Working Schedule'}
+                  >
+                    <Pencil size={12} />
+                    <span>{canManageSchedules ? 'Edit' : 'View'}</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {!loading && schedules.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-ink-400">
+                  No schedules found.{canManageSchedules ? ' Create one using the button above.' : ''}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

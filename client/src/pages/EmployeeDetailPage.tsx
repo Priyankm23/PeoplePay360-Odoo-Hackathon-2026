@@ -1,76 +1,276 @@
-import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, Calendar, Briefcase } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  Calendar,
+  Briefcase,
+  CreditCard,
+  ShieldCheck,
+  Pencil,
+  Trash2,
+  ExternalLink,
+} from 'lucide-react';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
-import { Table, THead, TH, TBody, TR, TD } from '@/components/Table';
-import { getEmployee, getManager, contractsForEmployee, attendanceForEmployee, timeOffForEmployee, formatCurrency } from '@/data';
-import type { View } from '@/types';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/Button';
+import { Modal } from '@/components/Modal';
+import { api } from '@/lib/api';
+import { formatCurrency } from '@/data';
+import type { View, UserSession } from '@/types';
+import { cn, formatRole } from '@/lib/utils';
 
 interface EmployeeDetailPageProps {
   employeeId: string;
-  onNavigate: (view: View, employeeId?: string) => void;
+  onNavigate: (view: View, id?: string) => void;
+  userSession?: UserSession | null;
 }
 
-type Tab = 'contracts' | 'attendance' | 'time-off';
+interface EmployeeDetailRecord {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  bankAccount?: string | null;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+  departmentId?: string | null;
+  jobPositionId?: string | null;
+  managerId?: string | null;
+  workingScheduleId?: string | null;
+  department?: { id: string; name: string } | null;
+  jobPosition?: { id: string; title: string } | null;
+  workingSchedule?: { id: string; name: string; type: string } | null;
+  manager?: { id: string; firstName: string; lastName: string; email?: string } | null;
+  user?: { id: string; role: string } | null;
+  counts: {
+    contracts: number;
+    attendance: number;
+    timeOffRequests: number;
+    timeOffAllocations: number;
+  };
+  activeContract?: {
+    id: string;
+    wage: number;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    salaryStructure?: { id: string; name: string };
+  } | null;
+}
 
-export function EmployeeDetailPage({ employeeId, onNavigate }: EmployeeDetailPageProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('contracts');
-  const employee = getEmployee(employeeId);
+export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: EmployeeDetailPageProps) {
+  const [employee, setEmployee] = useState<EmployeeDetailRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!employee) {
+  // RBAC permissions
+  const isSelf = userSession?.role === 'Employee';
+  const canManage = userSession?.role === 'Admin' || userSession?.role === 'HR Manager';
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editBankAccount, setEditBankAccount] = useState('');
+  const [editDeptId, setEditDeptId] = useState('');
+  const [editPosId, setEditPosId] = useState('');
+  const [editManagerId, setEditManagerId] = useState('');
+  const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Archive Modal State
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+
+  // Lookups for Edit Form
+  const [deptList, setDeptList] = useState<Array<{ id: string; name: string }>>([]);
+  const [posList, setPosList] = useState<Array<{ id: string; title: string; departmentId: string | null }>>([]);
+  const [allEmployees, setAllEmployees] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+
+  const loadEmployee = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.employees.getById(employeeId);
+      setEmployee(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load employee details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (employeeId) {
+      loadEmployee();
+    }
+  }, [employeeId]);
+
+  const openEditModal = async () => {
+    if (!employee) return;
+    setEditFirstName(employee.firstName);
+    setEditLastName(employee.lastName);
+    setEditPhone(employee.phone || '');
+    setEditBankAccount(employee.bankAccount || '');
+    setEditDeptId(employee.department?.id || '');
+    setEditPosId(employee.jobPosition?.id || '');
+    setEditManagerId(employee.manager?.id || '');
+    setEditStatus(employee.status);
+    setUpdateError(null);
+    setIsEditModalOpen(true);
+
+    try {
+      const [depts, poses, emps] = await Promise.all([
+        api.departments.getAll(),
+        api.jobPositions.getAll(),
+        api.employees.getAll(),
+      ]);
+      setDeptList(depts || []);
+      setPosList(poses || []);
+      const empItems = emps?.items || emps || [];
+      setAllEmployees(Array.isArray(empItems) ? empItems.filter((e: any) => e.id !== employee.id) : []);
+    } catch {
+      // Ignore lookup loading error
+    }
+  };
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employee) return;
+    setIsUpdating(true);
+    setUpdateError(null);
+
+    try {
+      await api.employees.update(employee.id, {
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+        phone: editPhone.trim() || null,
+        bankAccount: editBankAccount.trim() || null,
+        departmentId: editDeptId || null,
+        jobPositionId: editPosId || null,
+        managerId: editManagerId || null,
+        status: editStatus,
+      });
+
+      setIsEditModalOpen(false);
+      await loadEmployee();
+    } catch (err: any) {
+      setUpdateError(err.message || 'Failed to update employee details');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleArchiveEmployee = async () => {
+    if (!employee) return;
+    setIsArchiving(true);
+    setArchiveError(null);
+
+    try {
+      await api.employees.delete(employee.id);
+      setIsArchiveModalOpen(false);
+      onNavigate('employees');
+    } catch (err: any) {
+      setArchiveError(err.message || 'Failed to archive employee');
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="text-center py-12">
-        <p className="text-ink-500">Employee not found.</p>
-        <button
-          onClick={() => onNavigate('employees')}
-          className="text-chartreuse-600 text-sm mt-2"
-        >
-          Back to Employees
-        </button>
+      <div className="text-center py-20">
+        <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-sm text-ink-600">Loading live employee profile...</p>
       </div>
     );
   }
 
-  const manager = getManager(employee.managerId);
-  const contracts = contractsForEmployee(employeeId);
-  const attendance = attendanceForEmployee(employeeId);
-  const timeOff = timeOffForEmployee(employeeId);
-
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: 'contracts', label: 'Contracts', count: contracts.length },
-    { key: 'attendance', label: 'Attendance', count: attendance.length },
-    { key: 'time-off', label: 'Time Off', count: timeOff.length },
-  ];
+  if (error || !employee) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 font-medium">{error || 'Employee not found.'}</p>
+        {!isSelf && (
+          <button
+            onClick={() => onNavigate('employees')}
+            className="text-emerald-700 underline text-sm mt-3 hover:text-emerald-900"
+          >
+            Back to Employees
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Back link */}
-      <button
-        onClick={() => onNavigate('employees')}
-        className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-900 transition-colors mb-5"
-      >
-        <ArrowLeft size={15} />
-        Employees
-      </button>
+      {/* Header Bar */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          {isSelf ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
+                Personal Profile
+              </span>
+              <span className="text-xs text-ink-500">Your account overview and assigned operational metrics</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => onNavigate('employees')}
+              className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-900 transition-colors"
+            >
+              <ArrowLeft size={15} />
+              Back to Employees Directory
+            </button>
+          )}
+        </div>
 
-      <div className="flex gap-6">
-        {/* Left column - profile */}
-        <div className="w-[280px] shrink-0">
-          <div className="border border-border bg-surface rounded-sm-md p-5">
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={openEditModal}>
+              <Pencil size={13} />
+              Edit Profile
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsArchiveModalOpen(true);
+                setArchiveError(null);
+              }}
+              className="text-status-danger hover:border-status-danger"
+            >
+              <Trash2 size={13} />
+              Archive
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left column - profile card */}
+        <div className="w-full lg:w-[300px] shrink-0">
+          <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
             <div className="flex flex-col items-center text-center">
               <Avatar
                 firstName={employee.firstName}
                 lastName={employee.lastName}
-                color={employee.avatarColor}
+                color="bg-emerald-600"
                 size="lg"
               />
-              <h2 className="text-base font-semibold mt-3">
+              <h2 className="text-base font-bold mt-3 text-ink-900">
                 {employee.firstName} {employee.lastName}
               </h2>
-              <p className="text-sm text-ink-500 mt-0.5">{employee.jobTitle}</p>
-              <div className="mt-2">
-                <StatusDot type={employee.status} />
+              <p className="text-sm text-ink-500 mt-0.5">
+                {employee.jobPosition?.title || 'Team Member'}
+              </p>
+              <div className="mt-2.5">
+                <StatusDot type={employee.status === 'ACTIVE' ? 'active' : 'inactive'} />
               </div>
             </div>
 
@@ -78,179 +278,408 @@ export function EmployeeDetailPage({ employeeId, onNavigate }: EmployeeDetailPag
               <div className="flex items-center gap-2.5 text-sm">
                 <Briefcase size={15} className="text-ink-300 shrink-0" />
                 <span className="text-ink-500">Department</span>
-                <span className="ml-auto text-ink-900">{employee.department}</span>
+                <span className="ml-auto text-ink-900 font-medium">
+                  {employee.department?.name || '—'}
+                </span>
               </div>
               <div className="flex items-center gap-2.5 text-sm">
                 <Mail size={15} className="text-ink-300 shrink-0" />
-                <span className="text-ink-500 truncate">{employee.email}</span>
+                <span className="text-ink-500">Email</span>
+                <span className="ml-auto text-ink-900 text-xs truncate max-w-[140px]" title={employee.email}>
+                  {employee.email}
+                </span>
               </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <Phone size={15} className="text-ink-300 shrink-0" />
-                <span className="text-ink-900 tnum">{employee.phone}</span>
-              </div>
+              {employee.phone && (
+                <div className="flex items-center gap-2.5 text-sm">
+                  <Phone size={15} className="text-ink-300 shrink-0" />
+                  <span className="text-ink-500">Phone</span>
+                  <span className="ml-auto text-ink-900 tnum">{employee.phone}</span>
+                </div>
+              )}
+              {employee.bankAccount && (
+                <div className="flex items-center gap-2.5 text-sm">
+                  <CreditCard size={15} className="text-ink-300 shrink-0" />
+                  <span className="text-ink-500">Bank</span>
+                  <span className="ml-auto text-ink-900 font-mono text-xs truncate max-w-[130px]" title={employee.bankAccount}>
+                    {employee.bankAccount}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2.5 text-sm">
                 <Calendar size={15} className="text-ink-300 shrink-0" />
-                <span className="text-ink-500">Hired</span>
-                <span className="ml-auto text-ink-900 tnum">{employee.hireDate}</span>
+                <span className="text-ink-500">Joined</span>
+                <span className="ml-auto text-ink-900 tnum">
+                  {new Date(employee.createdAt).toLocaleDateString()}
+                </span>
               </div>
             </div>
 
-            {manager && (
-              <div className="mt-5 pt-5 border-t border-border-soft">
-                <div className="text-xs text-ink-500 mb-2">Manager</div>
+            {/* System Access Role Indicator */}
+            <div className="mt-4 pt-4 border-t border-border-soft">
+              <div className="text-xs text-ink-500 mb-1.5 flex items-center gap-1">
+                <ShieldCheck size={13} className="text-emerald-600" />
+                <span>System Access</span>
+              </div>
+              {employee.user ? (
+                <div className="px-2.5 py-1.5 rounded bg-emerald-50 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+                  <span>Role: {formatRole(employee.user.role)}</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                </div>
+              ) : (
+                <div className="px-2.5 py-1.5 rounded bg-paper text-ink-400 text-xs">
+                  No login account
+                </div>
+              )}
+            </div>
+
+            {employee.manager && (
+              <div className="mt-4 pt-4 border-t border-border-soft">
+                <div className="text-xs text-ink-500 mb-2">Reports To</div>
                 <div className="flex items-center gap-2.5">
                   <Avatar
-                    firstName={manager.firstName}
-                    lastName={manager.lastName}
-                    color={manager.avatarColor}
+                    firstName={employee.manager.firstName}
+                    lastName={employee.manager.lastName}
+                    color="bg-ink-700"
                     size="sm"
                   />
                   <div>
-                    <div className="text-sm font-medium">
-                      {manager.firstName} {manager.lastName}
+                    <div className="text-sm font-medium text-ink-900">
+                      {employee.manager.firstName} {employee.manager.lastName}
                     </div>
-                    <div className="text-xs text-ink-500">{manager.jobTitle}</div>
+                    {employee.manager.email && (
+                      <div className="text-xs text-ink-400">{employee.manager.email}</div>
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="mt-5 pt-5 border-t border-border-soft">
-              <div className="text-xs text-ink-500 mb-1">Working Schedule</div>
-              <div className="text-sm text-ink-900">{employee.workingSchedule}</div>
+            {employee.workingSchedule && (
+              <div className="mt-4 pt-4 border-t border-border-soft">
+                <div className="text-xs text-ink-500 mb-1">Working Schedule</div>
+                <div className="text-xs font-semibold text-ink-900">
+                  {employee.workingSchedule.name}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main column - Smart-Button Counts & Active Contract */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {/* Smart-Button Metric Badges (Interactive Navigation) */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-ink-500 uppercase tracking-wider">
+                Smart-Button Operational Metrics
+              </h3>
+              <span className="text-[11px] text-ink-400">Click any card to open related records</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                {
+                  label: 'Contracts',
+                  count: employee.counts?.contracts ?? 0,
+                  color: 'text-blue-600',
+                  targetView: 'contracts' as View,
+                  available: !isSelf, // Employee contracts page handled separately per specification
+                },
+                {
+                  label: 'Attendance Logs',
+                  count: employee.counts?.attendance ?? 0,
+                  color: 'text-emerald-600',
+                  targetView: 'attendance' as View,
+                  available: true,
+                },
+                {
+                  label: 'Time Off Requests',
+                  count: employee.counts?.timeOffRequests ?? 0,
+                  color: 'text-purple-600',
+                  targetView: 'time-off-requests' as View,
+                  available: true,
+                },
+                {
+                  label: 'Leave Allocations',
+                  count: employee.counts?.timeOffAllocations ?? 0,
+                  color: 'text-amber-600',
+                  targetView: isSelf ? ('time-off-requests' as View) : ('time-off-allocations' as View),
+                  available: true,
+                },
+              ].map((tile) => (
+                <button
+                  key={tile.label}
+                  type="button"
+                  onClick={() => {
+                    if (tile.available) {
+                      onNavigate(tile.targetView, employee.id);
+                    }
+                  }}
+                  className={cn(
+                    'border border-border bg-surface rounded-sm-md p-4 shadow-2xs text-left transition-all relative group',
+                    tile.available
+                      ? 'hover:border-ink-400 hover:shadow-xs cursor-pointer active:scale-[0.99]'
+                      : 'cursor-default opacity-80'
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-ink-500 font-medium">{tile.label}</span>
+                    {tile.available && (
+                      <ExternalLink size={12} className="text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </div>
+                  <div className={cn('text-2xl font-extrabold tnum', tile.color)}>
+                    {tile.count}
+                  </div>
+                  <span className="text-[10px] text-ink-400 mt-1 block">
+                    {tile.available ? 'View records →' : 'Dedicated module'}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Main column */}
-        <div className="flex-1 min-w-0">
-          {/* Stat tiles */}
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            {[
-              { label: 'Contracts', count: employee.contractCount },
-              { label: 'Attendance', count: employee.attendanceCount },
-              { label: 'Time Off', count: employee.timeOffCount },
-              { label: 'Allocations', count: employee.allocationCount },
-            ].map((tile) => (
-              <div
-                key={tile.label}
-                className="border border-border bg-surface rounded-sm-md px-4 py-3"
-              >
-                <div className="text-xs text-ink-500 mb-1">{tile.label}</div>
-                <div className="text-lg font-semibold tnum text-ink-900">{tile.count}</div>
+          {/* Active Contract Snapshot */}
+          <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
+            <h3 className="text-sm font-bold text-ink-900 mb-3 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+              Active Contract Overview
+            </h3>
+
+            {employee.activeContract ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div className="p-3 bg-paper rounded border border-border">
+                  <span className="text-xs text-ink-400 block mb-1">Monthly Wage</span>
+                  <span className="text-lg font-bold text-ink-900">
+                    {formatCurrency(employee.activeContract.wage)}
+                  </span>
+                </div>
+                <div className="p-3 bg-paper rounded border border-border">
+                  <span className="text-xs text-ink-400 block mb-1">Salary Structure</span>
+                  <span className="text-sm font-semibold text-ink-900">
+                    {employee.activeContract.salaryStructure?.name || 'Standard Package'}
+                  </span>
+                </div>
+                <div className="p-3 bg-paper rounded border border-border">
+                  <span className="text-xs text-ink-400 block mb-1">Contract Validity</span>
+                  <span className="text-xs font-semibold text-ink-900">
+                    {new Date(employee.activeContract.startDate).toLocaleDateString()} —{' '}
+                    {employee.activeContract.endDate
+                      ? new Date(employee.activeContract.endDate).toLocaleDateString()
+                      : 'Indefinite (Running)'}
+                  </span>
+                </div>
               </div>
-            ))}
+            ) : (
+              <div className="p-6 bg-paper rounded border border-dashed border-border text-center">
+                <p className="text-xs text-ink-400">
+                  No active running contract found for this employee.
+                </p>
+              </div>
+            )}
           </div>
-
-          {/* Tabs */}
-          <div className="flex items-center gap-1 border-b border-border mb-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors relative -mb-px border-b-2',
-                  activeTab === tab.key
-                    ? 'border-ink-900 text-ink-900'
-                    : 'border-transparent text-ink-500 hover:text-ink-700'
-                )}
-              >
-                {tab.label}
-                <span className="text-xs tnum text-ink-300">{tab.count}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          {activeTab === 'contracts' && (
-            <Table>
-              <THead>
-                <TH>Start Date</TH>
-                <TH>End Date</TH>
-                <TH align="right">Wage</TH>
-                <TH>Salary Structure</TH>
-                <TH>Status</TH>
-              </THead>
-              <TBody>
-                {contracts.map((c) => (
-                  <TR key={c.id} className={c.status === 'running' ? 'relative' : ''}>
-                    {c.status === 'running' && (
-                      <td className="absolute left-0 top-0 bottom-0 w-[3px] bg-chartreuse-500" />
-                    )}
-                    <TD className="tnum">{c.startDate}</TD>
-                    <TD className="tnum text-ink-500">{c.endDate ?? 'Present'}</TD>
-                    <TD align="right">
-                      {formatCurrency(c.wage)}
-                      <span className="text-ink-300 text-xs ml-1">/{c.wageType}</span>
-                    </TD>
-                    <TD className="text-ink-700">{c.salaryStructure}</TD>
-                    <TD>
-                      <StatusDot type={c.status} />
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-
-          {activeTab === 'attendance' && (
-            <Table>
-              <THead>
-                <TH>Date</TH>
-                <TH>Check In</TH>
-                <TH>Check Out</TH>
-                <TH align="right">Worked Hours</TH>
-                <TH>Status</TH>
-              </THead>
-              <TBody>
-                {attendance.map((a) => (
-                  <TR key={a.id}>
-                    <TD className="tnum">{a.date}</TD>
-                    <TD className="tnum">{a.checkIn ?? '—'}</TD>
-                    <TD className="tnum">{a.checkOut ?? '—'}</TD>
-                    <TD align="right" className="tnum">{a.workedHours ?? '—'}</TD>
-                    <TD>
-                      <StatusDot type={a.status} />
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-
-          {activeTab === 'time-off' && (
-            <Table>
-              <THead>
-                <TH>Type</TH>
-                <TH>Start Date</TH>
-                <TH>End Date</TH>
-                <TH align="right">Duration</TH>
-                <TH>Status</TH>
-              </THead>
-              <TBody>
-                {timeOff.map((r) => (
-                  <TR key={r.id}>
-                    <TD className="text-ink-700">{r.type}</TD>
-                    <TD className="tnum">{r.startDate}</TD>
-                    <TD className="tnum">{r.endDate}</TD>
-                    <TD align="right" className="tnum">{r.duration} days</TD>
-                    <TD>
-                      <StatusDot type={r.status} />
-                    </TD>
-                  </TR>
-                ))}
-                {timeOff.length === 0 && (
-                  <TR>
-                    <TD className="text-ink-300 text-center py-8" colSpan={5}>
-                      No time off requests
-                    </TD>
-                  </TR>
-                )}
-              </TBody>
-            </Table>
-          )}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {canManage && (
+        <Modal
+          open={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit Profile: ${employee.firstName} ${employee.lastName}`}
+        >
+          <form onSubmit={handleUpdateEmployee} className="space-y-4">
+            {updateError && (
+              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
+                {updateError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  First Name *
+                </label>
+                <input
+                  type="text"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="+1 555-0100"
+                  className="w-full px-3 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Bank Account (IBAN)
+                </label>
+                <input
+                  type="text"
+                  value={editBankAccount}
+                  onChange={(e) => setEditBankAccount(e.target.value)}
+                  placeholder="US893704..."
+                  className="w-full px-3 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Department
+                </label>
+                <select
+                  value={editDeptId}
+                  onChange={(e) => setEditDeptId(e.target.value)}
+                  className="w-full px-3 pr-8 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                >
+                  <option value="">No Department</option>
+                  {deptList.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Job Position
+                </label>
+                <select
+                  value={editPosId}
+                  onChange={(e) => setEditPosId(e.target.value)}
+                  className="w-full px-3 pr-8 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                >
+                  <option value="">No Position</option>
+                  {posList.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Reports To (Manager)
+                </label>
+                <select
+                  value={editManagerId}
+                  onChange={(e) => setEditManagerId(e.target.value)}
+                  className="w-full px-3 pr-8 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                >
+                  <option value="">No Manager</option>
+                  {allEmployees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.firstName} {e.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                  Employment Status
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                  className="w-full px-3 pr-8 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="md" disabled={isUpdating}>
+                {isUpdating ? 'Saving...' : 'Save Profile Changes'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Archive Confirmation Modal */}
+      {canManage && (
+        <Modal
+          open={isArchiveModalOpen}
+          onClose={() => setIsArchiveModalOpen(false)}
+          title="Archive Employee Record"
+        >
+          <div className="space-y-4">
+            {archiveError && (
+              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
+                {archiveError}
+              </div>
+            )}
+            <p className="text-sm text-ink-600">
+              Are you sure you want to archive <strong>{employee.firstName} {employee.lastName}</strong>?
+            </p>
+            <p className="text-xs text-ink-500">
+              This record will be soft-deleted. Historical attendance logs, contracts, and payslips will be preserved.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setIsArchiveModalOpen(false)}
+                disabled={isArchiving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                onClick={handleArchiveEmployee}
+                disabled={isArchiving}
+              >
+                {isArchiving ? 'Archiving...' : 'Confirm Archive'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

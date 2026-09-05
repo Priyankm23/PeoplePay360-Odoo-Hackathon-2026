@@ -6,12 +6,13 @@ import { Table, THead, TH, TBody, TR, TD } from '@/components/Table';
 import { Button } from '@/components/Button';
 import { contracts, getEmployee, formatCurrency } from '@/data';
 
-export function ContractsPage() {
+export function ContractsPage({ employeeId }: { employeeId?: string }) {
+  const visibleContracts = employeeId ? contracts.filter((contract) => contract.employeeId === employeeId) : contracts;
   return (
     <div>
       <PageHeader
         title="Contracts"
-        subtitle={`${contracts.length} employment contracts`}
+        subtitle={`${visibleContracts.length} employment contract${visibleContracts.length === 1 ? '' : 's'}${employeeId ? ' for this employee' : ''}`}
         actions={
           <Button variant="primary" size="md">
             <Plus size={15} />
@@ -29,7 +30,7 @@ export function ContractsPage() {
           <TH>Status</TH>
         </THead>
         <TBody>
-          {contracts.map((c) => {
+          {visibleContracts.map((c) => {
             const emp = getEmployee(c.employeeId);
             if (!emp) return null;
             return (

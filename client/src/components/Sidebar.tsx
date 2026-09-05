@@ -17,12 +17,12 @@ import {
   LogOut,
   type LucideIcon,
 } from 'lucide-react';
-import type { View, UserSession } from '@/types';
+import type { View, UserSession, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   current: View;
-  onNavigate: (view: View) => void;
+  onNavigate: (view: View, id?: string) => void;
   userSession?: UserSession | null;
   onLogout?: () => void;
 }
@@ -40,41 +40,63 @@ interface NavGroup {
   defaultOpen?: boolean;
 }
 
-const groups: (NavItem | NavGroup)[] = [
-  {
-    label: 'Employees',
-    icon: Users,
-    defaultOpen: true,
-    items: [
-      { label: 'Employees', icon: Users, view: 'employees' },
-      { label: 'Departments', icon: Building2, view: 'departments' },
-      { label: 'Working Schedules', icon: CalendarClock, view: 'working-schedules' },
-    ],
-  },
-  { label: 'Contracts', icon: FileText, view: 'contracts' },
-  { label: 'Attendance', icon: CalendarCheck, view: 'attendance' },
-  {
-    label: 'Time Off',
-    icon: Briefcase,
-    items: [
-      { label: 'Requests', icon: Briefcase, view: 'time-off-requests' },
-      { label: 'Allocations', icon: Briefcase, view: 'time-off-allocations' },
-      { label: 'Types', icon: Briefcase, view: 'time-off-types' },
-    ],
-  },
-  {
-    label: 'Payroll',
-    icon: Wallet,
-    defaultOpen: true,
-    items: [
-      { label: 'Dashboard', icon: LayoutDashboard, view: 'payroll-dashboard' },
-      { label: 'Payruns', icon: Receipt, view: 'payruns' },
-      { label: 'Payslips', icon: FileText, view: 'payslips' },
-      { label: 'Salary Structures', icon: Settings2, view: 'salary-structures' },
-      { label: 'Salary Rules', icon: Calculator, view: 'salary-rules' },
-    ],
-  },
-];
+function getNavItems(role?: UserRole): (NavItem | NavGroup)[] {
+  // Role: Employee
+  // Per Problem Statement & ia (2).md §1:
+  // Employees ▾ collapses to just single "My Profile", no dropdown.
+  // Attendance and Time Off are self-scoped, Payslips self-scoped without Payroll dropdown.
+  if (role === 'Employee') {
+    return [
+      { label: 'My Profile', icon: Users, view: 'employee-detail' },
+      { label: 'My Attendance', icon: CalendarCheck, view: 'attendance' },
+      { label: 'My Time Off', icon: Briefcase, view: 'time-off-requests' },
+      { label: 'My Payslips', icon: FileText, view: 'payslips' },
+    ];
+  }
+
+  const items: (NavItem | NavGroup)[] = [
+    {
+      label: 'Employees',
+      icon: Users,
+      defaultOpen: true,
+      items: [
+        { label: 'Employees', icon: Users, view: 'employees' },
+        { label: 'Departments', icon: Building2, view: 'departments' },
+        { label: 'Job Positions', icon: Briefcase, view: 'job-positions' },
+        { label: 'Working Schedules', icon: CalendarClock, view: 'working-schedules' },
+      ],
+    },
+    { label: 'Contracts', icon: FileText, view: 'contracts' },
+    { label: 'Attendance', icon: CalendarCheck, view: 'attendance' },
+    {
+      label: 'Time Off',
+      icon: Briefcase,
+      items: [
+        { label: 'Requests', icon: Briefcase, view: 'time-off-requests' },
+        { label: 'Allocations', icon: Briefcase, view: 'time-off-allocations' },
+        { label: 'Types', icon: Briefcase, view: 'time-off-types' },
+      ],
+    },
+  ];
+
+  // HR Manager has NO payroll access per PDF §3 & ia (2).md §1
+  if (role !== 'HR Manager') {
+    items.push({
+      label: 'Payroll',
+      icon: Wallet,
+      defaultOpen: true,
+      items: [
+        { label: 'Dashboard', icon: LayoutDashboard, view: 'payroll-dashboard' },
+        { label: 'Payruns', icon: Receipt, view: 'payruns' },
+        { label: 'Payslips', icon: FileText, view: 'payslips' },
+        { label: 'Salary Structures', icon: Settings2, view: 'salary-structures' },
+        { label: 'Salary Rules', icon: Calculator, view: 'salary-rules' },
+      ],
+    });
+  }
+
+  return items;
+}
 
 function isGroup(item: NavItem | NavGroup): item is NavGroup {
   return 'items' in item;
@@ -83,12 +105,11 @@ function isGroup(item: NavItem | NavGroup): item is NavGroup {
 export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {};
-    groups.forEach((g) => {
-      if (isGroup(g) && g.defaultOpen) init[g.label] = true;
-    });
-    return init;
+  const navItems = getNavItems(userSession?.role);
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    Employees: true,
+    Payroll: true,
   });
 
   const isActive = (view: View) => {
@@ -100,6 +121,14 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
 
   const isGroupActive = (group: NavGroup) =>
     group.items.some((item) => isActive(item.view));
+
+  const handleItemClick = (view: View) => {
+    if (view === 'employee-detail' && userSession?.role === 'Employee' && userSession.employeeId) {
+      onNavigate('employee-detail', userSession.employeeId);
+    } else {
+      onNavigate(view);
+    }
+  };
 
   return (
     <aside
@@ -123,7 +152,7 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2">
-        {groups.map((item) => {
+        {navItems.map((item) => {
           if (isGroup(item)) {
             const open = openGroups[item.label];
             const active = isGroupActive(item);
@@ -131,11 +160,17 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
             return (
               <div key={item.label} className="mb-0.5">
                 <button
-                  onClick={() =>
-                    setCollapsed
-                      ? setCollapsed(false)
-                      : setOpenGroups((prev) => ({ ...prev, [item.label]: !prev[item.label] }))
-                  }
+                  onClick={() => {
+                    if (collapsed) {
+                      setCollapsed(false);
+                      return;
+                    }
+
+                    setOpenGroups((prev) => ({
+                      ...prev,
+                      [item.label]: !prev[item.label],
+                    }));
+                  }}
                   onMouseEnter={() => collapsed && setCollapsed(false)}
                   className={cn(
                     'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm-md text-sm transition-colors',
@@ -158,7 +193,7 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
                       return (
                         <button
                           key={sub.view}
-                          onClick={() => onNavigate(sub.view)}
+                          onClick={() => handleItemClick(sub.view)}
                           className={cn(
                             'w-full flex items-center gap-2.5 pl-7 pr-2.5 py-1.5 rounded-sm-md text-sm transition-colors relative',
                             active
@@ -184,8 +219,8 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
           const active = isActive(item.view);
           return (
             <button
-              key={item.view}
-              onClick={() => onNavigate(item.view)}
+              key={item.label}
+              onClick={() => handleItemClick(item.view)}
               className={cn(
                 'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm-md text-sm transition-colors relative mb-0.5',
                 active

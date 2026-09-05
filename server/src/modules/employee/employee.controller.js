@@ -6,6 +6,9 @@ const {
 } = require('./employee.validation');
 const { ApiResponse } = require('../../utils/apiResponse');
 const asyncHandler = require('../../utils/asyncHandler');
+const { z } = require('zod');
+
+const idParamsSchema = z.object({ id: z.string().uuid('Invalid Employee ID') });
 
 class EmployeeController {
   /**
@@ -23,7 +26,8 @@ class EmployeeController {
    * Single employee profile with smart button metrics
    */
   getEmployeeById = asyncHandler(async (req, res) => {
-    const employee = await employeeService.getEmployeeById(req.params.id, req.user);
+    const { id } = idParamsSchema.parse(req.params);
+    const employee = await employeeService.getEmployeeById(id, req.user);
     return ApiResponse.success(res, employee, 'Employee profile retrieved successfully');
   });
 
@@ -43,7 +47,8 @@ class EmployeeController {
    */
   updateEmployee = asyncHandler(async (req, res) => {
     const validatedData = updateEmployeeSchema.parse(req.body);
-    const updated = await employeeService.updateEmployee(req.params.id, validatedData, req.user);
+    const { id } = idParamsSchema.parse(req.params);
+    const updated = await employeeService.updateEmployee(id, validatedData, req.user);
     return ApiResponse.success(res, updated, 'Employee updated successfully');
   });
 
@@ -52,7 +57,8 @@ class EmployeeController {
    * Admin and HR Manager only
    */
   archiveEmployee = asyncHandler(async (req, res) => {
-    const result = await employeeService.archiveEmployee(req.params.id, req.user);
+    const { id } = idParamsSchema.parse(req.params);
+    const result = await employeeService.archiveEmployee(id, req.user);
     return ApiResponse.success(res, result, 'Employee archived successfully');
   });
 }

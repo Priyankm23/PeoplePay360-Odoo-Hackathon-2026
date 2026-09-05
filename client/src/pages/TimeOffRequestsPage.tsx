@@ -11,11 +11,12 @@ import { cn } from '@/lib/utils';
 
 interface TimeOffRequestsPageProps {
   onNavigate: (view: View) => void;
+  employeeId?: string;
 }
 
 type SubTab = 'requests' | 'allocations' | 'types';
 
-export function TimeOffRequestsPage({ onNavigate }: TimeOffRequestsPageProps) {
+export function TimeOffRequestsPage({ onNavigate, employeeId }: TimeOffRequestsPageProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('requests');
   const [selectedRequest, setSelectedRequest] = useState<TimeOffRequest | null>(null);
 
@@ -62,7 +63,7 @@ export function TimeOffRequestsPage({ onNavigate }: TimeOffRequestsPageProps) {
           <TH>Status</TH>
         </THead>
         <TBody>
-          {timeOffRequests.map((req) => {
+          {timeOffRequests.filter((req) => !employeeId || req.employeeId === employeeId).map((req) => {
             const emp = getEmployee(req.employeeId);
             if (!emp) return null;
             return (

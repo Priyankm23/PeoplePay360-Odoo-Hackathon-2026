@@ -1,5 +1,5 @@
 import { Plus, ChevronRight } from 'lucide-react';
-import { PageHeader } from '@/components/PageHeader';
+import { PageHeader } from '../components/PageHeader';
 import { Table, THead, TH, TBody, TR, TD } from '@/components/Table';
 import { Button } from '@/components/Button';
 import { salaryStructures } from '@/data';

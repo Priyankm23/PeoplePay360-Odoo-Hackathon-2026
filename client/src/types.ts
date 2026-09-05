@@ -173,6 +173,7 @@ export interface PayrollAlert {
 export type View =
   | 'employees'
   | 'departments'
+  | 'job-positions'
   | 'working-schedules'
   | 'contracts'
   | 'attendance'
@@ -196,9 +197,11 @@ export type UserRole =
   | 'Employee';
 
 export interface UserSession {
+  id?: string;
   email: string;
   name: string;
   role: UserRole;
+  employeeId?: string | null;
   department?: string;
   avatarColor?: string;
 }

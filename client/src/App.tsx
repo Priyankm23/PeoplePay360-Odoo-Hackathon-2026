@@ -1,159 +1,107 @@
-import { useState } from 'react';
-import { Sidebar } from '@/components/Sidebar';
-import { AuthLandingPage } from '@/pages/AuthLandingPage';
-import { EmployeesPage } from '@/pages/EmployeesPage';
-import { EmployeeDetailPage } from '@/pages/EmployeeDetailPage';
-import { DepartmentsPage } from '@/pages/DepartmentsPage';
-import { WorkingSchedulesPage } from '@/pages/WorkingSchedulesPage';
-import { ContractsPage } from '@/pages/ContractsPage';
-import { AttendancePage } from '@/pages/AttendancePage';
-import { TimeOffRequestsPage } from '@/pages/TimeOffRequestsPage';
-import { PayrollDashboard } from '@/pages/PayrollDashboard';
-import { PayrunsPage } from '@/pages/PayrunsPage';
-import { PayrunDetailPage } from '@/pages/PayrunDetailPage';
-import { PayslipsPage } from '@/pages/PayslipsPage';
-import { PayslipDetailPage } from '@/pages/PayslipDetailPage';
-import { SalaryStructuresPage } from '@/pages/SalaryStructuresPage';
-import type { View, UserSession } from '@/types';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { AuthLandingPage } from './pages/AuthLandingPage';
+import { EmployeesPage } from './pages/EmployeesPage';
+import { EmployeeDetailPage } from './pages/EmployeeDetailPage';
+import { DepartmentsPage } from './pages/DepartmentsPage';
+import { JobPositionsPage } from './pages/JobPositionsPage';
+import { WorkingSchedulesPage } from './pages/WorkingSchedulesPage';
+import { ContractsPage } from './pages/ContractsPage';
+import { AttendancePage } from './pages/AttendancePage';
+import { TimeOffRequestsPage } from './pages/TimeOffRequestsPage';
+import { PayrollDashboard } from './pages/PayrollDashboard';
+import { PayrunsPage } from './pages/PayrunsPage';
+import { PayrunDetailPage } from './pages/PayrunDetailPage';
+import { PayslipsPage } from './pages/PayslipsPage';
+import { PayslipDetailPage } from './pages/PayslipDetailPage';
+import { SalaryStructuresPage } from './pages/SalaryStructuresPage';
+import type { View, UserSession, UserRole } from './types';
+import { ShieldCheck } from 'lucide-react';
+import { api } from './lib/api';
 
 export function App() {
   const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [currentView, setCurrentView] = useState<View>('payroll-dashboard');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('emp-1');
-  const [selectedPayrunId, setSelectedPayrunId] = useState<string>('p1');
-  const [selectedPayslipId, setSelectedPayslipId] = useState<string>('ps1');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('emp-1');
+  const [selectedPayrunId, setSelectedPayrunId] = useState('p1');
+  const [selectedPayslipId, setSelectedPayslipId] = useState('ps1');
+  const [relatedEmployeeId, setRelatedEmployeeId] = useState<string | undefined>();
 
-  const handleLogin = (session: UserSession) => {
-    setUserSession(session);
-    setCurrentView('payroll-dashboard');
-  };
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as { view?: View; id?: string; relatedEmployeeId?: string } | null;
+      if (!state?.view) return;
 
-  const handleLogout = () => {
-    setUserSession(null);
-  };
+      setCurrentView(state.view);
+      if (state.view === 'employee-detail' && state.id) setSelectedEmployeeId(state.id);
+      if (state.view === 'payrun-detail' && state.id) setSelectedPayrunId(state.id);
+      if (state.view === 'payslip-detail' && state.id) setSelectedPayslipId(state.id);
+      if (state.view === 'contracts' || state.view === 'attendance' || state.view === 'time-off-requests' || state.view === 'time-off-allocations') {
+        setRelatedEmployeeId(state.relatedEmployeeId);
+      }
+    };
 
-  const handleNavigate = (view: View, id?: string) => {
-    setCurrentView(view);
-    if (id) {
-      if (view === 'employee-detail') setSelectedEmployeeId(id);
-      if (view === 'payrun-detail') setSelectedPayrunId(id);
-      if (view === 'payslip-detail') setSelectedPayslipId(id);
+    if (!window.history.state?.view) {
+      window.history.replaceState({ view: currentView }, '', window.location.href);
     }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentView]);
+
+  useEffect(() => {
+    api.auth.getMe().then((user) => {
+      const roleMap: Record<string, UserRole> = { ADMIN: 'Admin', HR_MANAGER: 'HR Manager', HR_PAYROLL_MANAGER: 'HR Payroll Manager', HR_PAYROLL_USER: 'HR Payroll User', EMPLOYEE: 'Employee' };
+      const role = roleMap[user.role] || 'Employee';
+      setUserSession({ email: user.email, name: user.employee ? `${user.employee.firstName} ${user.employee.lastName}` : user.email.split('@')[0], role, employeeId: user.employeeId, department: user.employee?.department?.name || 'General', avatarColor: 'bg-chartreuse-500' });
+      if (role === 'Employee' && user.employeeId) { setSelectedEmployeeId(user.employeeId); setCurrentView('employee-detail'); } else if (role === 'HR Manager') setCurrentView('employees');
+    }).catch(() => {}).finally(() => setIsInitializing(false));
+  }, []);
+
+  const handleLogin = (session: UserSession) => { setUserSession(session); if (session.role === 'Employee') { if (session.employeeId) setSelectedEmployeeId(session.employeeId); setCurrentView('employee-detail'); } else if (session.role === 'HR Manager') setCurrentView('employees'); else setCurrentView('payroll-dashboard'); };
+  const handleLogout = async () => { try { await api.auth.logout(); } catch {} setUserSession(null); };
+  const handleNavigate = (view: View, id?: string) => {
+    if (view === 'employees' && userSession?.role === 'Employee') { if (userSession.employeeId) setSelectedEmployeeId(userSession.employeeId); setCurrentView('employee-detail'); return; }
+    if ((view === 'payroll-dashboard' || view === 'payruns' || view === 'salary-structures' || view === 'salary-rules') && userSession?.role === 'HR Manager') { setCurrentView('employees'); return; }
+    setCurrentView(view);
+    if (view === 'employee-detail' && id) setSelectedEmployeeId(id);
+    if (view === 'payrun-detail' && id) setSelectedPayrunId(id);
+    if (view === 'payslip-detail' && id) setSelectedPayslipId(id);
+    if (view === 'contracts' || view === 'attendance' || view === 'time-off-requests' || view === 'time-off-allocations') setRelatedEmployeeId(id);
+    window.history.pushState(
+      { view, id, relatedEmployeeId: view === 'contracts' || view === 'attendance' || view === 'time-off-requests' || view === 'time-off-allocations' ? id : undefined },
+      '',
+      window.location.href
+    );
   };
 
-  if (!userSession) {
-    return <AuthLandingPage onLogin={handleLogin} />;
-  }
+  if (isInitializing) return <div className="h-screen w-screen flex items-center justify-center bg-gray-50"><div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
+  if (!userSession) return <AuthLandingPage onLogin={handleLogin} />;
 
   const renderView = () => {
     switch (currentView) {
-      case 'employees':
-        return <EmployeesPage onNavigate={handleNavigate} />;
-      case 'employee-detail':
-        return (
-          <EmployeeDetailPage
-            employeeId={selectedEmployeeId}
-            onNavigate={handleNavigate}
-          />
-        );
-      case 'departments':
-        return <DepartmentsPage onNavigate={handleNavigate} />;
-      case 'working-schedules':
-        return <WorkingSchedulesPage />;
-      case 'contracts':
-        return <ContractsPage />;
-      case 'attendance':
-        return <AttendancePage />;
+      case 'employees': return <EmployeesPage onNavigate={handleNavigate} userSession={userSession} />;
+      case 'employee-detail': return <EmployeeDetailPage employeeId={selectedEmployeeId} onNavigate={handleNavigate} userSession={userSession} />;
+      case 'departments': return <DepartmentsPage onNavigate={handleNavigate} userSession={userSession} />;
+      case 'job-positions': return <JobPositionsPage userSession={userSession} />;
+      case 'working-schedules': return <WorkingSchedulesPage userSession={userSession} />;
+      case 'contracts': return <ContractsPage employeeId={relatedEmployeeId} />;
+      case 'attendance': return <AttendancePage employeeId={relatedEmployeeId} />;
       case 'time-off-requests':
       case 'time-off-allocations':
-      case 'time-off-types':
-        return <TimeOffRequestsPage onNavigate={handleNavigate} />;
-      case 'payroll-dashboard':
-        return <PayrollDashboard />;
-      case 'payruns':
-        return <PayrunsPage onNavigate={handleNavigate} />;
-      case 'payrun-detail':
-        return (
-          <PayrunDetailPage
-            payrunId={selectedPayrunId}
-            onNavigate={handleNavigate}
-          />
-        );
-      case 'payslips':
-        return <PayslipsPage onNavigate={handleNavigate} />;
-      case 'payslip-detail':
-        return (
-          <PayslipDetailPage
-            payslipId={selectedPayslipId}
-            onNavigate={handleNavigate}
-          />
-        );
+      case 'time-off-types': return <TimeOffRequestsPage onNavigate={handleNavigate} employeeId={relatedEmployeeId} />;
+      case 'payroll-dashboard': return <PayrollDashboard />;
+      case 'payruns': return <PayrunsPage onNavigate={handleNavigate} />;
+      case 'payrun-detail': return <PayrunDetailPage payrunId={selectedPayrunId} onNavigate={handleNavigate} />;
+      case 'payslips': return <PayslipsPage onNavigate={handleNavigate} />;
+      case 'payslip-detail': return <PayslipDetailPage payslipId={selectedPayslipId} onNavigate={handleNavigate} />;
       case 'salary-structures':
-      case 'salary-rules':
-        return <SalaryStructuresPage />;
-      default:
-        return <PayrollDashboard />;
+      case 'salary-rules': return <SalaryStructuresPage />;
+      default: return <PayrollDashboard />;
     }
   };
 
-  return (
-    <div className="flex h-screen bg-bg-app overflow-hidden font-sans text-ink-900 antialiased">
-      {/* Sidebar */}
-      <Sidebar
-        current={currentView}
-        onNavigate={(v) => handleNavigate(v)}
-        userSession={userSession}
-        onLogout={handleLogout}
-      />
-
-      {/* Main Container */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-app">
-        {/* Top Operational Bar */}
-        <header className="h-12 bg-white border-b border-border px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-ink-500 uppercase tracking-wider">
-              Portal Mode:
-            </span>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-chartreuse-50 border border-chartreuse-200 text-ink-900 text-xs font-medium">
-              <ShieldCheck size={14} className="text-chartreuse-600" />
-              <span>{userSession.role}</span>
-            </div>
-            {userSession.department && (
-              <span className="text-xs text-ink-500">
-                Department: <strong>{userSession.department}</strong>
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-ink-900 text-chartreuse-300 font-semibold text-xs flex items-center justify-center">
-                {userSession.name.charAt(0)}
-              </div>
-              <span className="text-xs font-medium text-ink-900">
-                {userSession.name}
-              </span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-xs text-ink-500 hover:text-status-danger transition-colors font-medium pl-2 border-l border-border"
-            >
-              <LogOut size={13} />
-              <span>Sign Out / Switch Role</span>
-            </button>
-          </div>
-        </header>
-
-        {/* View Content */}
-        <main className="flex-1 overflow-y-auto px-8 py-6">
-          <div className="max-w-7xl w-full mx-auto">
-            {renderView()}
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+  return <div className="flex h-screen bg-bg-app overflow-hidden font-sans text-ink-900 antialiased"><Sidebar current={currentView} onNavigate={(view) => handleNavigate(view)} userSession={userSession} onLogout={handleLogout} /><div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-app"><header className="h-12 bg-white border-b border-border px-6 flex items-center shrink-0"><div className="flex items-center gap-3"><span className="text-xs font-semibold text-ink-500 uppercase tracking-wider">Active Role:</span><div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-chartreuse-50 border border-chartreuse-200 text-ink-900 text-xs font-medium"><ShieldCheck size={14} className="text-chartreuse-600" /><span>{userSession.role}</span></div>{userSession.department && <span className="text-xs text-ink-500">Department: <strong>{userSession.department}</strong></span>}</div></header><main className="flex-1 overflow-y-auto px-8 py-6"><div className="max-w-7xl w-full mx-auto">{renderView()}</div></main></div></div>;
 }
 
 export default App;

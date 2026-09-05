@@ -10,7 +10,7 @@ import { attendanceRecords, getEmployee } from '@/data';
 import type { AttendanceRecord } from '@/types';
 import { cn } from '@/lib/utils';
 
-export function AttendancePage() {
+export function AttendancePage({ employeeId }: { employeeId?: string }) {
   const [correcting, setCorrecting] = useState<AttendanceRecord | null>(null);
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
@@ -47,7 +47,7 @@ export function AttendancePage() {
           <TH>Status</TH>
         </THead>
         <TBody>
-          {attendanceRecords.map((record) => {
+          {attendanceRecords.filter((record) => !employeeId || record.employeeId === employeeId).map((record) => {
             const emp = getEmployee(record.employeeId);
             if (!emp) return null;
             return (

@@ -1,0 +1,279 @@
+/**
+ * PeoplePay360 - Frontend API Client
+ * Connects React Vite UI to the Express backend API.
+ */
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+
+class ApiClient {
+  private getToken(): string | null {
+    return localStorage.getItem('peoplepay_token');
+  }
+
+  setToken(token: string | null) {
+    if (token) {
+      localStorage.setItem('peoplepay_token', token);
+    } else {
+      localStorage.removeItem('peoplepay_token');
+    }
+  }
+
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const token = this.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const errorMessage =
+        data?.error?.message || data?.message || `Request failed with status ${response.status}`;
+      const errorCode = data?.error?.code || 'API_ERROR';
+      const error = new Error(errorMessage) as Error & { code?: string; status: number };
+      error.code = errorCode;
+      error.status = response.status;
+
+      // Handle unauthenticated state
+      if (response.status === 401) {
+        this.setToken(null);
+      }
+
+      throw error;
+    }
+
+    return data?.data ?? data;
+  }
+
+  // ==========================================
+  // AUTHENTICATION MODULE
+  // ==========================================
+  auth = {
+    login: async (email: string, password: string) => {
+      const data = await this.request<{
+        token: string;
+        user: {
+          id: string;
+          email: string;
+          role: string;
+          employeeId: string | null;
+          employee?: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            department?: { name: string };
+            jobPosition?: { title: string };
+          };
+        };
+      }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (data?.token) {
+        this.setToken(data.token);
+      }
+      return data;
+    },
+
+    getMe: async () => {
+      return await this.request<{
+        id: string;
+        email: string;
+        role: string;
+        employeeId: string | null;
+        employee?: {
+          id: string;
+          firstName: string;
+          lastName: string;
+          department?: { name: string };
+          jobPosition?: { title: string };
+        };
+      }>('/auth/me');
+    },
+
+    changePassword: async (currentPassword: string, newPassword: string) => {
+      return await this.request('/auth/change-password', {
+        method: 'PATCH',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    },
+
+    logout: async () => {
+      try {
+        await this.request('/auth/logout', { method: 'POST' });
+      } finally {
+        this.setToken(null);
+      }
+    },
+  };
+
+  // ==========================================
+  // EMPLOYEE MASTER MODULE
+  // ==========================================
+  employees = {
+    getAll: async (params: {
+      view?: 'list' | 'kanban';
+      groupBy?: 'status' | 'departmentId';
+      departmentId?: string;
+      status?: 'ACTIVE' | 'INACTIVE';
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {}) => {
+      const searchParams = new URLSearchParams();
+      if (params.view) searchParams.append('view', params.view);
+      if (params.groupBy) searchParams.append('groupBy', params.groupBy);
+      if (params.departmentId) searchParams.append('departmentId', params.departmentId);
+      if (params.status) searchParams.append('status', params.status);
+      if (params.search) searchParams.append('search', params.search);
+      if (params.page) searchParams.append('page', String(params.page));
+      if (params.limit) searchParams.append('limit', String(params.limit));
+
+      const query = searchParams.toString();
+      return await this.request<any>(`/employees${query ? `?${query}` : ''}`);
+    },
+
+    getById: async (id: string) => {
+      return await this.request<any>(`/employees/${id}`);
+    },
+
+    create: async (data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      bankAccount?: string;
+      departmentId?: string;
+      jobPositionId?: string;
+      managerId?: string;
+      workingScheduleId?: string;
+      issueLogin?: boolean;
+      role?: string;
+      password?: string;
+    }) => {
+      return await this.request<any>('/employees', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    update: async (id: string, data: Record<string, any>) => {
+      return await this.request<any>(`/employees/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    delete: async (id: string) => {
+      return await this.request<any>(`/employees/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  // ==========================================
+  // DEPARTMENTS MODULE
+  // ==========================================
+  departments = {
+    getAll: async () => {
+      return await this.request<
+        Array<{
+          id: string;
+          name: string;
+          employeeCount: number;
+          createdAt: string;
+          updatedAt: string;
+        }>
+      >('/departments');
+    },
+
+    create: async (name: string) => {
+      return await this.request<any>('/departments', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+    },
+
+    update: async (id: string, name: string) => {
+      return await this.request<any>(`/departments/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name }),
+      });
+    },
+
+    delete: async (id: string) => {
+      return await this.request<any>(`/departments/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  // ==========================================
+  // JOB POSITIONS MODULE
+  // ==========================================
+  jobPositions = {
+    getAll: async (departmentId?: string) => {
+      const query = departmentId ? `?departmentId=${departmentId}` : '';
+      return await this.request<
+        Array<{
+          id: string;
+          title: string;
+          departmentId: string | null;
+          department?: { id: string; name: string };
+          employeeCount: number;
+        }>
+      >(`/job-positions${query}`);
+    },
+
+    create: async (title: string, departmentId?: string) => {
+      return await this.request<{
+        id: string;
+        title: string;
+        departmentId: string | null;
+        department?: { id: string; name: string };
+        employeeCount: number;
+      }>('/job-positions', {
+        method: 'POST',
+        body: JSON.stringify({ title, departmentId: departmentId || null }),
+      });
+    },
+
+    update: async (id: string, data: { title?: string; departmentId?: string | null }) => {
+      return await this.request<any>(`/job-positions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    delete: async (id: string) => {
+      return await this.request<any>(`/job-positions/${id}`, {
+        method: 'DELETE',
+      });
+    },
+  };
+
+  workingSchedules = {
+    getAll: async () => this.request<any[]>('/working-schedules'),
+    getById: async (id: string) => this.request<any>(`/working-schedules/${id}`),
+    create: async (data: { name: string; type: 'FULL_TIME' | 'PART_TIME'; lines: Array<{ day: string; startTime: string; endTime: string; breakMinutes: number }> }) =>
+      this.request<any>('/working-schedules', { method: 'POST', body: JSON.stringify(data) }),
+    update: async (id: string, data: any) => this.request<any>(`/working-schedules/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: async (id: string) => this.request<any>(`/working-schedules/${id}`, { method: 'DELETE' }),
+  };
+}
+
+export const api = new ApiClient();

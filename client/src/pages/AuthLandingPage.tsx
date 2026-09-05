@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Lock,
   Mail,
-  Sparkles,
   Eye,
   EyeOff,
   UserCheck,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { UserRole, UserSession } from '@/types';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 
 interface AuthLandingPageProps {
   onLogin: (session: UserSession) => void;
@@ -36,48 +36,57 @@ const DEMO_PRESETS: {
 }[] = [
   {
     role: 'Admin',
-    name: 'Alexandra Vance',
-    email: 'admin@peoplepay360.io',
+    name: 'System Administrator',
+    email: 'admin@demo.com',
     badge: 'System Admin',
     badgeStyle: 'bg-emerald-50 text-emerald-800 border-emerald-200/80 font-medium',
     description: 'Full platform control, user provisioning, global security, and module access.',
-    initials: 'AV',
-  },
-  {
-    role: 'HR Payroll Manager',
-    name: 'Sarah Jenkins',
-    email: 'payroll.mgr@peoplepay360.io',
-    badge: 'Payroll Lead',
-    badgeStyle: 'bg-chartreuse-100 text-chartreuse-900 border-chartreuse-300 font-semibold',
-    description: 'CRUD on Payruns, Payslips, Salary Structures, Formula Rules, and Employees.',
-    initials: 'SJ',
+    initials: 'AD',
   },
   {
     role: 'HR Manager',
-    name: 'Marcus Chen',
-    email: 'hr.mgr@peoplepay360.io',
+    name: 'Sarah Jenkins',
+    email: 'hrmanager@demo.com',
     badge: 'HR Operations',
     badgeStyle: 'bg-blue-50 text-blue-800 border-blue-200/80 font-medium',
     description: 'Manages Employee directory, Contracts, Attendance tracking, and Leave approvals.',
+    initials: 'SJ',
+  },
+  {
+    role: 'HR Payroll Manager',
+    name: 'Elena Rostova',
+    email: 'payrollmanager@demo.com',
+    badge: 'Payroll Lead',
+    badgeStyle: 'bg-chartreuse-100 text-chartreuse-900 border-chartreuse-300 font-semibold',
+    description: 'Full payroll batch operations, payrun validation, payment execution, and rules.',
+    initials: 'ER',
+  },
+  {
+    role: 'HR Payroll User',
+    name: 'Michael Chen',
+    email: 'payrolluser@demo.com',
+    badge: 'Payroll Officer',
+    badgeStyle: 'bg-amber-50 text-amber-800 border-amber-200/80 font-medium',
+    description: 'Drafts payruns, computes payslips, and inspects employee wage calculations.',
     initials: 'MC',
   },
   {
     role: 'Employee',
-    name: 'David Miller',
-    email: 'd.miller@peoplepay360.io',
+    name: 'Alex Rivera',
+    email: 'employee@demo.com',
     badge: 'Self-Service',
     badgeStyle: 'bg-purple-50 text-purple-800 border-purple-200/80 font-medium',
-    description: 'Personal portal to log daily attendance check-ins and submit leave requests.',
-    initials: 'DM',
+    description: 'Personal self-service portal to punch daily attendance and submit leave requests.',
+    initials: 'AR',
   },
 ];
 
 export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
-  const [email, setEmail] = useState('payroll.mgr@peoplepay360.io');
-  const [password, setPassword] = useState('demoPassword123');
-  const [role, setRole] = useState<UserRole>('HR Payroll Manager');
-  const [department, setDepartment] = useState('Finance');
+  const [email, setEmail] = useState('hrmanager@demo.com');
+  const [password, setPassword] = useState('Password123!');
+  const [role, setRole] = useState<UserRole>('HR Manager');
+  const [department, setDepartment] = useState('Human Resources');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -85,11 +94,11 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
   const handleSelectPreset = (preset: typeof DEMO_PRESETS[0]) => {
     setEmail(preset.email);
     setRole(preset.role);
-    setPassword('demoPassword123');
+    setPassword('Password123!');
     setErrorMsg('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setErrorMsg('Please enter your work email and password.');
@@ -99,17 +108,35 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
     setIsLoading(true);
     setErrorMsg('');
 
-    setTimeout(() => {
-      setIsLoading(false);
-      const matched = DEMO_PRESETS.find((p) => p.email === email);
+    try {
+      const result = await api.auth.login(email, password);
+
+      const roleMap: Record<string, UserRole> = {
+        ADMIN: 'Admin',
+        HR_MANAGER: 'HR Manager',
+        HR_PAYROLL_MANAGER: 'HR Payroll Manager',
+        HR_PAYROLL_USER: 'HR Payroll User',
+        EMPLOYEE: 'Employee',
+      };
+
+      const userRole = roleMap[result.user.role] || (role as UserRole);
+      const employeeName = result.user.employee
+        ? `${result.user.employee.firstName} ${result.user.employee.lastName}`
+        : result.user.email.split('@')[0];
+
       onLogin({
-        email,
-        name: matched ? matched.name : email.split('@')[0].replace('.', ' '),
-        role,
-        department,
+        email: result.user.email,
+        name: employeeName,
+        role: userRole,
+        employeeId: result.user.employeeId,
+        department: result.user.employee?.department?.name || department,
         avatarColor: 'bg-chartreuse-500',
       });
-    }, 350);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -199,13 +226,8 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
             {/* Overview Tab Content */}
             {activeTab === 'overview' && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-chartreuse-100/70 border border-chartreuse-300/80 text-chartreuse-900 text-xs sm:text-sm font-semibold">
-                  <Sparkles size={15} className="text-chartreuse-600 shrink-0" />
-                  <span>Odoo Hackathon Operational Architecture Standard</span>
-                </div>
-
                 <div className="space-y-2">
-                  <h1 className="text-3xl sm:text-4xl lg:text-[2.7rem] font-extrabold tracking-tight text-ink-900 leading-[1.1]">
+                  <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold tracking-tight text-ink-900 leading-[1.05]">
                     Integrated HR & <br />
                     <span className="text-chartreuse-700">Payroll Engine</span>
                   </h1>

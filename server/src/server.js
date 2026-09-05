@@ -12,7 +12,7 @@ const PORT = config.PORT;
 // Core Middlewares
 app.use(
   cors({
-    origin: config.CORS_ORIGIN === '*' ? true : config.CORS_ORIGIN,
+    origin: config.CORS_ORIGIN,
     credentials: true,
   })
 );
@@ -68,11 +68,13 @@ const authRoutes = require('./modules/auth/auth.routes');
 const employeeRoutes = require('./modules/employee/employee.routes');
 const departmentRoutes = require('./modules/department/department.routes');
 const jobPositionRoutes = require('./modules/jobPosition/jobPosition.routes');
+const workingScheduleRoutes = require('./modules/workingSchedule/workingSchedule.routes');
 
 app.use(['/api/v1/auth', '/api/auth'], authRoutes);
 app.use(['/api/v1/employees', '/api/employees'], employeeRoutes);
 app.use(['/api/v1/departments', '/api/departments'], departmentRoutes);
 app.use(['/api/v1/job-positions', '/api/job-positions'], jobPositionRoutes);
+app.use(['/api/v1/working-schedules', '/api/working-schedules'], workingScheduleRoutes);
 
 // Global Error Handling
 app.use(notFound);
