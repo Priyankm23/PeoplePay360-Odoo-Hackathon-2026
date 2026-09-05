@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +20,13 @@ export function Modal({ open, onClose, title, subtitle, children, footer, width 
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.body.style.overflow = originalOverflow;
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -30,15 +37,16 @@ export function Modal({ open, onClose, title, subtitle, children, footer, width 
     lg: 'max-w-2xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[5vh] pb-6 sm:pt-[8vh]">
+  const modalElement = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4">
+      {/* Full-screen backdrop covering entire viewport including top header bar */}
       <div
-        className="absolute inset-0 bg-ink-900/20 backdrop-blur-[1px]"
+        className="fixed inset-0 bg-ink-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       <div
         className={cn(
-          'relative flex max-h-[90vh] w-full flex-col overflow-hidden bg-surface border border-border rounded-lg shadow-pop',
+          'relative z-10 flex max-h-[90vh] w-full flex-col overflow-hidden bg-surface border border-border rounded-lg shadow-pop',
           widths[width]
         )}
       >
@@ -63,4 +71,6 @@ export function Modal({ open, onClose, title, subtitle, children, footer, width 
       </div>
     </div>
   );
+
+  return createPortal(modalElement, document.body);
 }

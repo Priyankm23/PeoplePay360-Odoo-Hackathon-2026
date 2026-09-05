@@ -123,25 +123,41 @@ export interface Payslip {
   warnings: number;
 }
 
+export type SalaryRuleCategory = 'BASIC' | 'ALLOWANCE' | 'GROSS' | 'DEDUCTION' | 'NET';
+export type ComputationMethod = 'FIXED' | 'PERCENTAGE';
+
 export interface SalaryStructure {
   id: string;
   name: string;
-  type: 'monthly' | 'hourly';
+  isActive: boolean;
+  active?: boolean;
   rulesCount: number;
-  parent: string | null;
-  active: boolean;
+  contractCount?: number;
+  payrunsCount?: number;
+  rules?: SalaryRule[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SalaryRule {
   id: string;
+  salaryStructureId?: string;
   name: string;
   code: string;
-  category: 'Basic' | 'Allowance' | 'Deduction';
-  structure: string;
+  category: SalaryRuleCategory | string;
   sequence: number;
-  condition: string;
-  formula: string;
-  active: boolean;
+  computationMethod: ComputationMethod;
+  fixedAmount: number | null;
+  percentage: number | null;
+  baseRuleId: string | null;
+  baseRule?: {
+    id: string;
+    name: string;
+    code: string;
+    sequence: number;
+  } | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DepartmentInfo {

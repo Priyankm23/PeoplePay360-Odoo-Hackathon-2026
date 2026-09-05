@@ -421,6 +421,106 @@ class ApiClient {
         method: 'DELETE',
       }),
   };
+
+  // ==========================================
+  // SALARY STRUCTURES & RULES MODULE
+  // ==========================================
+  salaryStructures = {
+    getAll: async (params?: { includeInactive?: boolean }) => {
+      const q = params?.includeInactive ? '?includeInactive=true' : '';
+      return this.request<any[]>(`/salary-structures${q}`);
+    },
+
+    getById: async (id: string) =>
+      this.request<any>(`/salary-structures/${id}`),
+
+    create: async (data: { name: string; isActive?: boolean }) =>
+      this.request<any>('/salary-structures', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: async (id: string, data: { name?: string; isActive?: boolean }) =>
+      this.request<any>(`/salary-structures/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: async (id: string) =>
+      this.request<any>(`/salary-structures/${id}`, {
+        method: 'DELETE',
+      }),
+
+    getRules: async (structureId: string) =>
+      this.request<any[]>(`/salary-structures/${structureId}/rules`),
+
+    createRule: async (
+      structureId: string,
+      data: {
+        name: string;
+        code: string;
+        category: string;
+        sequence: number;
+        computationMethod: 'FIXED' | 'PERCENTAGE';
+        fixedAmount?: number | null;
+        percentage?: number | null;
+        baseRuleId?: string | null;
+      }
+    ) =>
+      this.request<any>(`/salary-structures/${structureId}/rules`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  };
+
+  salaryRules = {
+    getAll: async (params?: { structureId?: string }) => {
+      const query = params?.structureId ? `?structureId=${encodeURIComponent(params.structureId)}` : '';
+      return this.request<any[]>(`/salary-rules${query}`);
+    },
+
+    create: async (
+      structureId: string,
+      data: {
+        name: string;
+        code: string;
+        category: string;
+        sequence: number;
+        computationMethod: 'FIXED' | 'PERCENTAGE';
+        fixedAmount?: number | null;
+        percentage?: number | null;
+        baseRuleId?: string | null;
+      }
+    ) =>
+      this.request<any>(`/salary-structures/${structureId}/rules`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    update: async (
+      id: string,
+      data: {
+        name?: string;
+        code?: string;
+        category?: string;
+        sequence?: number;
+        computationMethod?: 'FIXED' | 'PERCENTAGE';
+        fixedAmount?: number | null;
+        percentage?: number | null;
+        baseRuleId?: string | null;
+      }
+    ) =>
+      this.request<any>(`/salary-rules/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+
+    delete: async (id: string) =>
+      this.request<any>(`/salary-rules/${id}`, {
+        method: 'DELETE',
+      }),
+  };
 }
 
 export const api = new ApiClient();
+

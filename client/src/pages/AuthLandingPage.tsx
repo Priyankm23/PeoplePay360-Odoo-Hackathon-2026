@@ -402,8 +402,18 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
           </div>
 
           {/* Right Column — Fitted Sign In Card */}
-          <div className="lg:col-span-5 w-full min-h-0 bg-[#EDEEEA] border-l border-[#D3D6CE] px-5 py-6 sm:px-8 lg:px-10 flex items-center justify-center">
-            <div className="bg-white border border-[#DADDD9] rounded-3xl p-5 sm:p-6 shadow-[0_12px_36px_rgba(28,31,30,0.09)] w-full max-w-md relative overflow-hidden">
+          <div className="relative lg:col-span-5 w-full min-h-0 border-l border-[#D3D6CE] px-5 py-6 sm:px-8 lg:px-10 flex items-center justify-center overflow-hidden">
+            <video
+              className="absolute inset-0 h-full w-full object-cover"
+              src="/video.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              aria-hidden="true"
+            />
+            <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
+            <div className="relative z-10 bg-white border border-[#DADDD9] rounded-3xl p-5 sm:p-6 shadow-[0_12px_36px_rgba(28,31,30,0.18)] w-full max-w-md overflow-hidden">
               <div className="mb-4 pb-3.5 border-b border-[#D5D8D1]">
                 <h2 className="text-lg sm:text-xl font-extrabold text-ink-900 tracking-tight">Welcome back</h2>
                 <p className="text-xs sm:text-sm text-ink-600 mt-1 leading-normal">

@@ -468,11 +468,11 @@ export function ContractsPage({
           <Table className="[&>table]:table-fixed">
             <THead>
               <TH className="w-[8%]">Contract</TH>
-              <TH className="w-[17%]">Employee</TH>
-              <TH className="w-[15%]">Role &amp; Dept</TH>
-              <TH className="w-[17%]">Validity Period</TH>
-              <TH align="right" className="w-[11%]">Wage</TH>
-              <TH className="w-[15%]">Salary Structure</TH>
+              <TH className="w-[15%]">Employee</TH>
+              <TH className="w-[14%]">Role &amp; Dept</TH>
+              <TH className="w-[15%]">Validity Period</TH>
+              <TH align="right" className="w-[12%]">Wage</TH>
+              <TH className="w-[17%]">Salary Structure</TH>
               <TH align="center" className="w-[9%]">Status</TH>
               <TH align="right" className="w-[8%]">Actions</TH>
             </THead>
@@ -497,20 +497,12 @@ export function ContractsPage({
                     </TD>
 
                     {/* Employee info */}
-                    <TD>
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          firstName={emp?.firstName || '—'}
-                          lastName={emp?.lastName || ''}
-                          size="sm"
-                          color="bg-emerald-700"
-                        />
-                        <div>
+                    <TD className="pl-14">
+                      <div>
                           <div className="font-semibold text-ink-900">
                             {emp?.firstName} {emp?.lastName}
                           </div>
                           <div className="text-[11px] text-ink-400">{emp?.email}</div>
-                        </div>
                       </div>
                     </TD>
 
@@ -767,10 +759,10 @@ export function ContractsPage({
       {/* CREATE / EDIT CONTRACT MODAL                             */}
       {/* ======================================================== */}
       <Modal
-        isOpen={isFormOpen}
+        open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         title={isEditing ? 'Edit Employment Contract' : 'Create New Contract'}
-        size="lg"
+        width="lg"
       >
         <form onSubmit={handleSubmitForm} className="space-y-4">
           {formError && (

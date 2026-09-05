@@ -97,8 +97,8 @@ export function App() {
       case 'payrun-detail': return <PayrunDetailPage payrunId={selectedPayrunId} onNavigate={handleNavigate} />;
       case 'payslips': return <PayslipsPage onNavigate={handleNavigate} />;
       case 'payslip-detail': return <PayslipDetailPage payslipId={selectedPayslipId} onNavigate={handleNavigate} />;
-      case 'salary-structures':
-      case 'salary-rules': return <SalaryStructuresPage />;
+      case 'salary-structures': return <SalaryStructuresPage initialTab="structures" userSession={userSession} onNavigate={handleNavigate} />;
+      case 'salary-rules': return <SalaryStructuresPage initialTab="rules" userSession={userSession} onNavigate={handleNavigate} />;
       default: return <PayrollDashboard />;
     }
   };
