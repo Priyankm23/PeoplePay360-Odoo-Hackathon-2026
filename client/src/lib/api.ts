@@ -520,6 +520,79 @@ class ApiClient {
         method: 'DELETE',
       }),
   };
+
+  // ==========================================
+  // PAYRUNS MODULE
+  // ==========================================
+  payruns = {
+    getAll: async (params?: { status?: string; search?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.append('status', params.status);
+      if (params?.search) q.append('search', params.search);
+      const query = q.toString();
+      return this.request<any[]>(`/payruns${query ? `?${query}` : ''}`);
+    },
+
+    getById: async (id: string) => this.request<any>(`/payruns/${id}`),
+
+    previewEligible: async (data: {
+      salaryStructureId: string;
+      periodStart: string;
+      periodEnd: string;
+    }) =>
+      this.request<any>('/payruns/preview-eligible', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    create: async (data: {
+      name: string;
+      salaryStructureId: string;
+      periodStart: string;
+      periodEnd: string;
+      employeeIds: string[];
+    }) =>
+      this.request<any>('/payruns', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    compute: async (id: string) =>
+      this.request<any>(`/payruns/${id}/compute`, {
+        method: 'POST',
+      }),
+
+    validate: async (id: string) =>
+      this.request<any>(`/payruns/${id}/validate`, {
+        method: 'POST',
+      }),
+
+    markPaid: async (id: string) =>
+      this.request<any>(`/payruns/${id}/mark-paid`, {
+        method: 'POST',
+      }),
+
+    delete: async (id: string) =>
+      this.request<any>(`/payruns/${id}`, {
+        method: 'DELETE',
+      }),
+  };
+
+  // ==========================================
+  // PAYSLIPS MODULE
+  // ==========================================
+  payslips = {
+    getAll: async (params?: { payrunId?: string; employeeId?: string; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.payrunId) q.append('payrunId', params.payrunId);
+      if (params?.employeeId) q.append('employeeId', params.employeeId);
+      if (params?.status) q.append('status', params.status);
+      const query = q.toString();
+      return this.request<any[]>(`/payslips${query ? `?${query}` : ''}`);
+    },
+
+    getById: async (id: string) => this.request<any>(`/payslips/${id}`),
+  };
 }
 
 export const api = new ApiClient();

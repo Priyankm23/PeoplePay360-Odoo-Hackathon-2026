@@ -93,34 +93,103 @@ export type PayrunStatus = 'draft' | 'computed' | 'validated' | 'paid';
 export interface Payrun {
   id: string;
   name: string;
-  salaryStructure: string;
+  salaryStructureId?: string;
+  salaryStructure?: string;
+  rulesCount?: number;
   periodStart: string;
   periodEnd: string;
   status: PayrunStatus;
   employeeCount: number;
+  totalGross?: number;
   totalNet: number;
+  totalWarnings?: number;
   createdAt: string;
+  payslips?: Payslip[];
 }
 
-export type PayslipStatus = 'draft' | 'computed' | 'confirmed' | 'paid';
+export type PayslipStatus = 'draft' | 'computed' | 'validated' | 'paid';
+
+export interface PayslipWarning {
+  code: string;
+  message: string;
+  severity?: 'advisory' | 'warning' | 'blocking';
+}
 
 export interface PayslipLine {
-  ruleName: string;
-  category: 'Basic' | 'Allowance' | 'Deduction';
+  id?: string;
+  salaryRuleId?: string;
+  code?: string;
+  ruleName?: string;
+  name?: string;
+  category: string;
   amount: number;
+  sequence?: number;
 }
 
 export interface Payslip {
   id: string;
   employeeId: string;
+  employeeName?: string;
+  email?: string;
+  department?: string;
+  jobTitle?: string;
   payrunId: string;
+  payrunName?: string;
   payPeriod: string;
   payrunRef: string;
   status: PayslipStatus;
   lines: PayslipLine[];
-  gross: number;
-  net: number;
-  warnings: number;
+  workedDays?: number;
+  gross?: number;
+  grossSalary?: number;
+  net?: number;
+  netSalary?: number;
+  warnings?: PayslipWarning[] | number;
+  hasBlockingWarnings?: boolean;
+  linesCount?: number;
+  employee?: {
+    id: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    bankAccount?: string;
+    department?: string;
+    jobTitle?: string;
+  };
+  contract?: {
+    id: string;
+    reference: string;
+    wage: number;
+    structure?: string;
+  };
+  createdAt?: string;
+}
+
+export interface EligibleEmployee {
+  employeeId: string;
+  name: string;
+  email: string;
+  department: string;
+  jobTitle: string;
+  wage: number;
+  contractId: string | null;
+  hasRunningContract: boolean;
+  warnings: string[];
+}
+
+export interface PayrunPreview {
+  salaryStructure: {
+    id: string;
+    name: string;
+    rulesCount: number;
+  };
+  periodStart: string;
+  periodEnd: string;
+  totalEmployees: number;
+  eligibleCount: number;
+  eligibleEmployees: EligibleEmployee[];
 }
 
 export type SalaryRuleCategory = 'BASIC' | 'ALLOWANCE' | 'GROSS' | 'DEDUCTION' | 'NET';

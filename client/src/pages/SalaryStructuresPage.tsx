@@ -569,7 +569,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
               />
 
               {/* Search Bar */}
-              <div className="flex items-center gap-3 bg-white p-3 border border-border rounded-sm-md shadow-2xs">
+              <div className="flex items-center gap-3 bg-surface p-3 border border-border rounded-lg shadow-2xs">
                 <div className="relative flex-1 max-w-md">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
                   <input
@@ -586,7 +586,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
               </div>
 
               {/* Structures Table */}
-              <div className="bg-white border border-border rounded-sm-md shadow-2xs overflow-hidden">
+              <div className="bg-white overflow-hidden">
                 {isLoading ? (
                   <div className="py-16 text-center text-xs text-ink-400">
                     <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-emerald-600" />
@@ -601,10 +601,10 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
                     </p>
                   </div>
                 ) : (
-                  <Table>
+                  <Table className="[&>table]:table-fixed border border-[#E7EAE7] rounded-sm-md shadow-none">
                     <THead>
                       <TH>Structure Name</TH>
-                      <TH>Status</TH>
+                      <TH align="center">Status</TH>
                       <TH align="center">Rules</TH>
                       <TH align="center">Employees / Contracts</TH>
                       <TH align="right">Actions</TH>
@@ -635,7 +635,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
                           </TD>
 
                           {/* Status */}
-                          <TD>
+                          <TD align="center">
                             {s.isActive ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 <CheckCircle2 size={12} />
@@ -820,7 +820,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
                   </span>
                 </div>
 
-                <div className="bg-white border border-border rounded-sm-md shadow-2xs overflow-hidden">
+                <div className="bg-white overflow-hidden">
                   {isLoadingStructureRules ? (
                     <div className="py-12 text-center text-xs text-ink-400">
                       <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-emerald-600" />
@@ -835,7 +835,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
                       </p>
                     </div>
                   ) : (
-                    <Table>
+                    <Table className="border border-[#E7EAE7] rounded-sm-md shadow-none">
                       <THead>
                         <TH align="center">Seq</TH>
                         <TH>Rule Name</TH>
@@ -961,7 +961,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
           />
 
           {/* Filter Toolbar matching Wireframe Screen 3 */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 border border-border rounded-sm-md shadow-2xs">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-surface p-3 border border-border rounded-lg shadow-2xs">
             {/* Search */}
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
@@ -998,7 +998,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
           </div>
 
           {/* All Rules Master Table */}
-          <div className="bg-white border border-border rounded-sm-md shadow-2xs overflow-hidden">
+          <div className="bg-white overflow-hidden">
             {isLoading ? (
               <div className="py-16 text-center text-xs text-ink-400">
                 <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-emerald-600" />
@@ -1015,15 +1015,15 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
                 </p>
               </div>
             ) : (
-              <Table>
+              <Table className="[&>table]:table-fixed border border-[#E7EAE7] rounded-sm-md shadow-none">
                 <THead>
-                  <TH>Rule Name</TH>
-                  <TH>Code</TH>
-                  <TH>Category</TH>
-                  <TH>Structure</TH>
-                  <TH>Computation Formula</TH>
-                  <TH align="center">Sequence</TH>
-                  <TH align="right">Actions</TH>
+                  <TH className="w-[20%] pl-3">Rule Name</TH>
+                  <TH className="w-[10%] pl-3">Code</TH>
+                  <TH className="w-[15%] pl-3">Category</TH>
+                  <TH className="w-[18%] pl-3">Structure</TH>
+                  <TH className="w-[22%] pl-3">Computation Formula</TH>
+                  <TH align="center" className="w-[8%]">Sequence</TH>
+                  <TH align="right" className="w-[7%]">Actions</TH>
                 </THead>
                 <TBody>
                   {filteredRules.map((rule) => {

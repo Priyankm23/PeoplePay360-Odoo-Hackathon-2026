@@ -448,7 +448,7 @@ export function ContractsPage({
       </div>
 
       {/* Contracts Table */}
-      <div className="bg-white border border-border rounded-sm-md shadow-2xs overflow-hidden">
+      <div className="bg-white overflow-hidden">
         {isLoading ? (
           <div className="py-16 text-center text-xs text-ink-400">
             <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-emerald-600" />
@@ -465,13 +465,13 @@ export function ContractsPage({
             </p>
           </div>
         ) : (
-          <Table className="[&>table]:table-fixed">
+          <Table className="[&>table]:table-fixed border border-[#E7EAE7] rounded-sm-md shadow-none">
             <THead>
               <TH className="w-[8%]">Contract</TH>
               <TH className="w-[15%]">Employee</TH>
               <TH className="w-[14%]">Role &amp; Dept</TH>
               <TH className="w-[15%]">Validity Period</TH>
-              <TH align="right" className="w-[12%]">Wage</TH>
+              <TH className="w-[12%]">Wage</TH>
               <TH className="w-[17%]">Salary Structure</TH>
               <TH align="center" className="w-[9%]">Status</TH>
               <TH align="right" className="w-[8%]">Actions</TH>
@@ -531,7 +531,7 @@ export function ContractsPage({
                     </TD>
 
                     {/* Wage */}
-                    <TD align="right" className="tnum">
+                    <TD className="tnum">
                       <span className="font-semibold text-ink-900">{formatCurrency(c.wage)}</span>
                       <span className="text-[11px] text-ink-400 block">/ month</span>
                     </TD>

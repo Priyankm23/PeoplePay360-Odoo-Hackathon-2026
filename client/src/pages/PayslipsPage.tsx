@@ -1,66 +1,229 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Search, RefreshCw, AlertCircle, FileText, ExternalLink } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
 import { Table, THead, TH, TBody, TR, TD } from '@/components/Table';
-import { payslips, getEmployee, formatCurrency, payruns } from '@/data';
-import type { View } from '@/types';
+import { Button } from '@/components/Button';
+import { api } from '@/lib/api';
+import { formatCurrency } from '@/data';
+import type { View, Payslip, UserSession } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface PayslipsPageProps {
   onNavigate: (view: View, id?: string) => void;
+  userSession?: UserSession | null;
 }
 
-export function PayslipsPage({ onNavigate }: PayslipsPageProps) {
+type StatusFilter = 'ALL' | 'DRAFT' | 'COMPUTED' | 'VALIDATED' | 'PAID';
+
+export function PayslipsPage({ onNavigate, userSession }: PayslipsPageProps) {
+  const [payslipsList, setPayslipsList] = useState<Payslip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchPayslips = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.payslips.getAll({
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      });
+      const data = Array.isArray(res) ? res : res?.data || [];
+      setPayslipsList(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch payslips');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  useEffect(() => {
+    fetchPayslips();
+  }, [fetchPayslips]);
+
+  const filtered = payslipsList.filter((p) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      (p.employeeName || '').toLowerCase().includes(query) ||
+      (p.department || '').toLowerCase().includes(query) ||
+      (p.payrunName || '').toLowerCase().includes(query)
+    );
+  });
+
+  const totalCount = payslipsList.length;
+  const validatedCount = payslipsList.filter((p) => p.status.toUpperCase() === 'VALIDATED').length;
+  const paidCount = payslipsList.filter((p) => p.status.toUpperCase() === 'PAID').length;
+  const totalPaidSum = payslipsList
+    .filter((p) => p.status.toUpperCase() === 'PAID')
+    .reduce((sum, p) => sum + (p.netSalary || p.net || 0), 0);
+
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Payslips"
-        subtitle={`${payslips.length} payslips across all payruns`}
+        subtitle={`${totalCount} employee payslips generated across payroll runs`}
+        actions={
+          <Button variant="outline" size="sm" onClick={fetchPayslips} disabled={loading}>
+            <RefreshCw size={14} className={cn(loading && 'animate-spin')} />
+            Refresh
+          </Button>
+        }
       />
-      <Table>
-        <THead>
-          <TH>Employee</TH>
-          <TH>Pay Period</TH>
-          <TH>Payrun</TH>
-          <TH align="right">Gross</TH>
-          <TH align="right">Net Salary</TH>
-          <TH>Status</TH>
-        </THead>
-        <TBody>
-          {payslips.map((p) => {
-            const emp = getEmployee(p.employeeId);
-            const payrun = payruns.find((pr) => pr.id === p.payrunId);
-            if (!emp) return null;
-            return (
-              <TR key={p.id} onClick={() => onNavigate('payslip-detail', p.id)}>
-                <TD>
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      firstName={emp.firstName}
-                      lastName={emp.lastName}
-                      color={emp.avatarColor}
-                      size="sm"
-                    />
-                    <span className="font-medium">
-                      {emp.firstName} {emp.lastName}
-                    </span>
-                  </div>
-                </TD>
-                <TD className="text-ink-700">{p.payPeriod}</TD>
-                <TD className="text-ink-500 text-xs">{payrun?.name ?? '—'}</TD>
-                <TD align="right" className="tnum text-ink-500">
-                  {formatCurrency(p.gross)}
-                </TD>
-                <TD align="right" className="tnum font-medium">
-                  {formatCurrency(p.net)}
-                </TD>
-                <TD>
-                  <StatusDot type={p.status} />
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+
+      {/* Metric Tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3.5 bg-surface border border-[#E7EAE7] rounded-lg shadow-2xs">
+          <div className="text-xs text-ink-500 font-medium">Total Payslips</div>
+          <div className="text-xl font-bold text-ink-900 mt-1 tnum">{totalCount}</div>
+        </div>
+        <div className="p-3.5 bg-surface border border-[#E7EAE7] rounded-lg shadow-2xs">
+          <div className="text-xs text-ink-500 font-medium flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-status-warning" />
+            Validated (Pending Payout)
+          </div>
+          <div className="text-xl font-bold text-ink-900 mt-1 tnum">{validatedCount}</div>
+        </div>
+        <div className="p-3.5 bg-surface border border-[#E7EAE7] rounded-lg shadow-2xs">
+          <div className="text-xs text-ink-500 font-medium flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-status-success" />
+            Paid / Disbursed
+          </div>
+          <div className="text-xl font-bold text-ink-900 mt-1 tnum">{paidCount}</div>
+        </div>
+        <div className="p-3.5 bg-surface border border-[#E7EAE7] rounded-lg shadow-2xs">
+          <div className="text-xs text-ink-500 font-medium">Total Disbursed Net</div>
+          <div className="text-xl font-bold text-emerald-700 mt-1 tnum">
+            {formatCurrency(totalPaidSum)}
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-surface border border-[#E7EAE7] rounded-lg shadow-2xs">
+        <div className="flex items-center gap-1 w-fit">
+          {(['ALL', 'DRAFT', 'COMPUTED', 'VALIDATED', 'PAID'] as StatusFilter[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              className={cn(
+                'px-3 py-1 rounded text-xs font-medium transition-colors',
+                statusFilter === tab
+                  ? 'bg-ink-900 text-white'
+                  : 'text-ink-600 hover:text-ink-900 hover:bg-paper'
+              )}
+            >
+              {tab === 'ALL' ? 'All' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-72">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+          <input
+            type="text"
+            placeholder="Search employee or payrun..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-1.5 bg-surface border border-border rounded-sm-md text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-ink-400 transition-colors"
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-sm-md flex items-center gap-2 text-xs text-red-700">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading && payslipsList.length === 0 ? (
+        <div className="text-center py-16 bg-surface border border-border rounded-sm-md">
+          <div className="w-6 h-6 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-xs text-ink-500">Loading payslips...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 bg-surface border border-border rounded-sm-md space-y-3">
+          <div className="w-12 h-12 rounded-full bg-paper flex items-center justify-center mx-auto text-ink-400">
+            <FileText size={24} />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-ink-900">No Payslips Found</h3>
+            <p className="text-xs text-ink-500 max-w-sm mx-auto">
+              No employee payslips match your search or filter criteria.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Table>
+            <THead>
+              <TH>Employee</TH>
+              <TH>Pay Period</TH>
+              <TH>Payrun</TH>
+              <TH align="right">Gross</TH>
+              <TH align="right">Net Salary</TH>
+              <TH>Status</TH>
+              <TH align="right">Action</TH>
+            </THead>
+            <TBody>
+              {filtered.map((p) => (
+                <TR
+                  key={p.id}
+                  onClick={() => onNavigate('payslip-detail', p.id)}
+                  className="cursor-pointer hover:bg-paper/70 transition-colors"
+                >
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        firstName={p.employeeName?.split(' ')[0] || ''}
+                        lastName={p.employeeName?.split(' ')[1] || ''}
+                        size="sm"
+                      />
+                      <div>
+                        <div className="font-semibold text-xs text-ink-900">
+                          {p.employeeName}
+                        </div>
+                        <div className="text-[11px] text-ink-500">
+                          {p.jobTitle} • {p.department}
+                        </div>
+                      </div>
+                    </div>
+                  </TD>
+                  <TD className="text-xs text-ink-700 tnum">{p.payPeriod}</TD>
+                  <TD className="text-xs text-ink-500">{p.payrunName || '—'}</TD>
+                  <TD align="right" className="tnum text-xs text-ink-600">
+                    {formatCurrency(p.grossSalary || p.gross || 0)}
+                  </TD>
+                  <TD align="right" className="tnum text-xs font-bold text-ink-900">
+                    {formatCurrency(p.netSalary || p.net || 0)}
+                  </TD>
+                  <TD>
+                    <StatusDot type={p.status} />
+                  </TD>
+                  <TD align="right">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate('payslip-detail', p.id);
+                      }}
+                      className="p-1 rounded text-ink-400 hover:text-ink-900 hover:bg-paper transition-colors"
+                      title="View payslip details"
+                    >
+                      <ExternalLink size={14} />
+                    </button>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

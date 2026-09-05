@@ -93,10 +93,10 @@ export function App() {
       case 'time-off-allocations':
       case 'time-off-types': return <TimeOffRequestsPage onNavigate={handleNavigate} employeeId={relatedEmployeeId} />;
       case 'payroll-dashboard': return <PayrollDashboard />;
-      case 'payruns': return <PayrunsPage onNavigate={handleNavigate} />;
-      case 'payrun-detail': return <PayrunDetailPage payrunId={selectedPayrunId} onNavigate={handleNavigate} />;
-      case 'payslips': return <PayslipsPage onNavigate={handleNavigate} />;
-      case 'payslip-detail': return <PayslipDetailPage payslipId={selectedPayslipId} onNavigate={handleNavigate} />;
+      case 'payruns': return <PayrunsPage onNavigate={handleNavigate} userSession={userSession} />;
+      case 'payrun-detail': return <PayrunDetailPage payrunId={selectedPayrunId} onNavigate={handleNavigate} userSession={userSession} />;
+      case 'payslips': return <PayslipsPage onNavigate={handleNavigate} userSession={userSession} />;
+      case 'payslip-detail': return <PayslipDetailPage payslipId={selectedPayslipId} onNavigate={handleNavigate} userSession={userSession} />;
       case 'salary-structures': return <SalaryStructuresPage initialTab="structures" userSession={userSession} onNavigate={handleNavigate} />;
       case 'salary-rules': return <SalaryStructuresPage initialTab="rules" userSession={userSession} onNavigate={handleNavigate} />;
       default: return <PayrollDashboard />;

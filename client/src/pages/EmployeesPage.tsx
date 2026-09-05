@@ -223,9 +223,9 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-5 p-3 bg-surface border border-border rounded-lg shadow-2xs">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
+        <div className="relative flex-1 min-w-[220px] max-w-sm">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300" />
           <input
             type="text"
@@ -331,13 +331,13 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
           <p className="text-sm text-ink-400">No employees match the selected criteria.</p>
         </div>
       ) : viewMode === 'list' ? (
-        <Table className="[&>table]:table-fixed">
+        <Table className="[&>table]:table-fixed shadow-2xs">
           <THead>
             <TH className="w-[27%]">Employee</TH>
-            <TH className="w-[17%]">Department</TH>
-            <TH className="w-[20%]">Job Position</TH>
-            <TH className="w-[16%]">Manager</TH>
-            <TH className="w-[12%]">Role</TH>
+            <TH className="w-[16%]">Department</TH>
+            <TH className="w-[18%]">Job Position</TH>
+            <TH className="w-[14%]">Manager</TH>
+            <TH className="w-[17%]">Role</TH>
             <TH className="w-[8%]" align="center">Status</TH>
           </THead>
           <TBody>
@@ -373,7 +373,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
                 </TD>
                 <TD>
                   {emp.user ? (
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span className="inline-block whitespace-nowrap text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                       {formatRole(emp.user.role)}
                     </span>
                   ) : (

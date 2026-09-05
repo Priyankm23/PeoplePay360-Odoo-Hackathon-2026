@@ -274,7 +274,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column - profile card */}
         <div className="w-full lg:w-[300px] shrink-0">
-          <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
+          <div className="border border-border bg-surface rounded-lg p-5 shadow-2xs">
             <div className="flex flex-col items-center text-center">
               <Avatar
                 firstName={employee.firstName}
@@ -398,7 +398,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
         </div>
 
         {/* Main column - Smart-Button Counts & Active Contract */}
-        <div className="flex-1 min-w-0 space-y-6">
+        <div className="flex-1 min-w-0 space-y-5">
           {/* Smart-Button Metric Badges (Interactive Navigation) */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -412,28 +412,28 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 {
                   label: 'Attendance',
                   count: employee.counts?.attendance ?? 0,
-                  color: 'text-blue-600',
+                  color: 'text-emerald-700',
                   available: true,
                   targetView: 'attendance' as const,
                 },
                 {
                   label: 'Leave Requests',
                   count: employee.counts?.timeOffRequests ?? 0,
-                  color: 'text-amber-600',
+                  color: 'text-emerald-700',
                   available: true,
                   targetView: 'time-off-requests' as const,
                 },
                 {
                   label: 'Leave Allocations',
                   count: employee.counts?.timeOffAllocations ?? 0,
-                  color: 'text-purple-600',
+                  color: 'text-emerald-700',
                   available: true,
                   targetView: 'time-off-allocations' as const,
                 },
                 {
                   label: 'Contracts',
                   count: employee.counts?.contracts ?? 0,
-                  color: 'text-emerald-600',
+                  color: 'text-emerald-700',
                   available: true,
                   targetView: 'contracts' as const,
                 },
@@ -444,7 +444,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                   onClick={() => tile.available && onNavigate(tile.targetView, employee.id)}
                   disabled={!tile.available}
                   className={cn(
-                    'p-4 bg-surface rounded-sm-md border border-border shadow-2xs text-left transition-all group',
+                    'p-4 bg-surface rounded-lg border border-border shadow-2xs text-left transition-all group',
                     tile.available
                       ? 'hover:border-ink-400 hover:shadow-xs cursor-pointer active:scale-[0.99]'
                       : 'cursor-default opacity-80'
@@ -468,7 +468,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
           </div>
 
           {/* Active Contract Snapshot */}
-          <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
+          <div className="border border-border bg-surface rounded-lg p-5 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
@@ -542,7 +542,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
           </div>
 
           {/* Weekly Working Schedule Breakdown */}
-          <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
+          <div className="border border-border bg-surface rounded-lg p-5 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
                 <Clock size={16} className="text-emerald-600" />
