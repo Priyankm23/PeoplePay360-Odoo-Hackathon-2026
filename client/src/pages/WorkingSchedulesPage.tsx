@@ -26,6 +26,7 @@ type Schedule = {
   weeklyHours: number;
   daysPerWeek: number;
   employeeCount: number;
+  isArchived: boolean;
 };
 
 const defaultLines = (): Line[] =>
@@ -136,6 +137,16 @@ export function WorkingSchedulesPage({ userSession }: WorkingSchedulesPageProps)
       setError(err.message || 'Unable to save schedule');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (schedule: Schedule) => {
+    if (!canManageSchedules) return;
+    try {
+      await api.workingSchedules.setArchived(schedule.id, !schedule.isArchived);
+      await load();
+    } catch (err: any) {
+      setError(err.message || 'Unable to update schedule status');
     }
   };
 
@@ -350,7 +361,9 @@ export function WorkingSchedulesPage({ userSession }: WorkingSchedulesPageProps)
                 <td className="px-4 py-3 tnum">{schedule.weeklyHours.toFixed(1)}h</td>
                 <td className="px-4 py-3">{schedule.employeeCount}</td>
                 <td className="px-4 py-3">
-                  <span className="text-xs text-status-success">Active</span>
+                  <span className={schedule.isArchived ? 'text-xs text-ink-400' : 'text-xs text-status-success'}>
+                    {schedule.isArchived ? 'Inactive' : 'Active'}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <button
@@ -361,6 +374,16 @@ export function WorkingSchedulesPage({ userSession }: WorkingSchedulesPageProps)
                     <Pencil size={12} />
                     <span>{canManageSchedules ? 'Edit' : 'View'}</span>
                   </button>
+                  {canManageSchedules && (
+                    <button
+                      type="button"
+                      onClick={() => toggleStatus(schedule)}
+                      className="ml-2 text-xs text-ink-600 hover:text-ink-900"
+                      title={schedule.isArchived ? 'Reactivate Working Schedule' : 'Make Working Schedule Inactive'}
+                    >
+                      {schedule.isArchived ? 'Reactivate' : 'Deactivate'}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

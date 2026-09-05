@@ -10,6 +10,7 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
+  Clock,
 } from 'lucide-react';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
@@ -41,7 +42,17 @@ interface EmployeeDetailRecord {
   workingScheduleId?: string | null;
   department?: { id: string; name: string } | null;
   jobPosition?: { id: string; title: string } | null;
-  workingSchedule?: { id: string; name: string; type: string } | null;
+  workingSchedule?: {
+    id: string;
+    name: string;
+    type: string;
+    lines?: Array<{
+      day: string;
+      startTime: string;
+      endTime: string;
+      breakMinutes: number;
+    }>;
+  } | null;
   manager?: { id: string; firstName: string; lastName: string; email?: string } | null;
   user?: { id: string; role: string } | null;
   counts: {
@@ -356,10 +367,20 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
 
             {employee.workingSchedule && (
               <div className="mt-4 pt-4 border-t border-border-soft">
-                <div className="text-xs text-ink-500 mb-1">Working Schedule</div>
+                <div className="text-xs text-ink-500 mb-1 flex items-center justify-between">
+                  <span>Working Schedule</span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-medium">
+                    {employee.workingSchedule.type === 'FULL_TIME' ? 'Full-Time' : 'Part-Time'}
+                  </span>
+                </div>
                 <div className="text-xs font-semibold text-ink-900">
                   {employee.workingSchedule.name}
                 </div>
+                {employee.workingSchedule.lines && (
+                  <div className="text-[11px] text-ink-400 mt-0.5">
+                    {employee.workingSchedule.lines.length} scheduled days / week
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -378,44 +399,41 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 {
-                  label: 'Contracts',
-                  count: employee.counts?.contracts ?? 0,
-                  color: 'text-blue-600',
-                  targetView: 'contracts' as View,
-                  available: !isSelf, // Employee contracts page handled separately per specification
-                },
-                {
-                  label: 'Attendance Logs',
+                  label: 'Attendance',
                   count: employee.counts?.attendance ?? 0,
-                  color: 'text-emerald-600',
-                  targetView: 'attendance' as View,
+                  color: 'text-blue-600',
                   available: true,
+                  targetView: 'attendance' as const,
                 },
                 {
-                  label: 'Time Off Requests',
+                  label: 'Leave Requests',
                   count: employee.counts?.timeOffRequests ?? 0,
-                  color: 'text-purple-600',
-                  targetView: 'time-off-requests' as View,
+                  color: 'text-amber-600',
                   available: true,
+                  targetView: 'time-off-requests' as const,
                 },
                 {
                   label: 'Leave Allocations',
                   count: employee.counts?.timeOffAllocations ?? 0,
-                  color: 'text-amber-600',
-                  targetView: isSelf ? ('time-off-requests' as View) : ('time-off-allocations' as View),
+                  color: 'text-purple-600',
                   available: true,
+                  targetView: 'time-off-allocations' as const,
+                },
+                {
+                  label: 'Contracts',
+                  count: employee.counts?.contracts ?? 0,
+                  color: 'text-emerald-600',
+                  available: true,
+                  targetView: 'contracts' as const,
                 },
               ].map((tile) => (
                 <button
                   key={tile.label}
                   type="button"
-                  onClick={() => {
-                    if (tile.available) {
-                      onNavigate(tile.targetView, employee.id);
-                    }
-                  }}
+                  onClick={() => tile.available && onNavigate(tile.targetView, employee.id)}
+                  disabled={!tile.available}
                   className={cn(
-                    'border border-border bg-surface rounded-sm-md p-4 shadow-2xs text-left transition-all relative group',
+                    'p-4 bg-surface rounded-sm-md border border-border shadow-2xs text-left transition-all group',
                     tile.available
                       ? 'hover:border-ink-400 hover:shadow-xs cursor-pointer active:scale-[0.99]'
                       : 'cursor-default opacity-80'
@@ -473,6 +491,129 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
               <div className="p-6 bg-paper rounded border border-dashed border-border text-center">
                 <p className="text-xs text-ink-400">
                   No active running contract found for this employee.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Weekly Working Schedule Breakdown */}
+          <div className="border border-border bg-surface rounded-sm-md p-5 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
+                <Clock size={16} className="text-emerald-600" />
+                Working Schedule & Hours Breakdown
+              </h3>
+              {employee.workingSchedule && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-ink-700 bg-paper px-2.5 py-1 rounded border border-border">
+                    {employee.workingSchedule.name}
+                  </span>
+                  <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {employee.workingSchedule.type === 'FULL_TIME' ? 'Full Time' : 'Part Time'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {employee.workingSchedule?.lines && employee.workingSchedule.lines.length > 0 ? (
+              <div className="space-y-3 pt-1">
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-paper/80 border-b border-border text-ink-500 uppercase tracking-wider text-[11px]">
+                        <th className="px-3.5 py-2.5 text-left">Day</th>
+                        <th className="px-3.5 py-2.5 text-left">Working Hours</th>
+                        <th className="px-3.5 py-2.5 text-left">Break</th>
+                        <th className="px-3.5 py-2.5 text-right">Net Daily Hours</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-soft">
+                      {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((dayName) => {
+                        const line = employee.workingSchedule?.lines?.find((l) => l.day === dayName);
+                        const isToday =
+                          new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase() === dayName;
+
+                        if (!line) {
+                          return (
+                            <tr key={dayName} className={cn('text-ink-400 bg-paper/20', isToday && 'bg-emerald-50/40')}>
+                              <td className="px-3.5 py-2 font-medium capitalize">
+                                <div className="flex items-center gap-1.5">
+                                  <span>{dayName.toLowerCase()}</span>
+                                  {isToday && (
+                                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100 px-1.5 py-0.5 rounded">
+                                      Today
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3.5 py-2 text-ink-400 italic">Off / Rest Day</td>
+                              <td className="px-3.5 py-2 text-ink-400">—</td>
+                              <td className="px-3.5 py-2 text-right text-ink-400 tnum">0.0h</td>
+                            </tr>
+                          );
+                        }
+
+                        // Calculate net daily hours
+                        const [startH, startM] = line.startTime.split(':').map(Number);
+                        const [endH, endM] = line.endTime.split(':').map(Number);
+                        const totalMins = endH * 60 + endM - (startH * 60 + startM) - (line.breakMinutes || 0);
+                        const netHours = Math.max(0, totalMins / 60).toFixed(1);
+
+                        return (
+                          <tr
+                            key={dayName}
+                            className={cn(
+                              'hover:bg-paper/40 transition-colors',
+                              isToday && 'bg-emerald-50/60 font-medium'
+                            )}
+                          >
+                            <td className="px-3.5 py-2.5 font-semibold text-ink-900 capitalize">
+                              <div className="flex items-center gap-1.5">
+                                <span>{dayName.toLowerCase()}</span>
+                                {isToday && (
+                                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded">
+                                    Today
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3.5 py-2.5 text-ink-800 tnum font-medium">
+                              {line.startTime} — {line.endTime}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-ink-600 tnum">
+                              {line.breakMinutes > 0 ? `${line.breakMinutes} min` : 'None'}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right font-bold text-ink-900 tnum">
+                              {netHours}h
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500 pt-1 px-1">
+                  <span>Standard expectation used for attendance punctuality, overtime, and payroll.</span>
+                  <span className="font-semibold text-ink-900">
+                    Total:{' '}
+                    {employee.workingSchedule.lines
+                      .reduce((sum, l) => {
+                        const [startH, startM] = l.startTime.split(':').map(Number);
+                        const [endH, endM] = l.endTime.split(':').map(Number);
+                        const totalMins =
+                          endH * 60 + endM - (startH * 60 + startM) - (l.breakMinutes || 0);
+                        return sum + Math.max(0, totalMins / 60);
+                      }, 0)
+                      .toFixed(1)}
+                    h / week
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 bg-paper rounded border border-dashed border-border text-center">
+                <p className="text-xs text-ink-400">
+                  No weekly working schedule lines assigned to this employee.
                 </p>
               </div>
             )}

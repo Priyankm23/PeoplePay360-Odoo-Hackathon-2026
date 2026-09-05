@@ -274,6 +274,72 @@ class ApiClient {
     update: async (id: string, data: any) => this.request<any>(`/working-schedules/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: async (id: string) => this.request<any>(`/working-schedules/${id}`, { method: 'DELETE' }),
   };
+
+  // ==========================================
+  // ATTENDANCE MODULE
+  // ==========================================
+  attendance = {
+    getTodayStatus: async () =>
+      this.request<{
+        hasEmployeeProfile: boolean;
+        checkedIn: boolean;
+        isCompleted: boolean;
+        attendance: any | null;
+        elapsedSeconds: number;
+        todayTotalHours: number;
+      }>('/attendance/today-status'),
+
+    checkIn: async (employeeId?: string) =>
+      this.request<any>('/attendance/check-in', {
+        method: 'POST',
+        body: JSON.stringify(employeeId ? { employeeId } : {}),
+      }),
+
+    checkOut: async (id?: string, employeeId?: string) => {
+      const endpoint = id ? `/attendance/${id}/check-out` : '/attendance/check-out';
+      const method = id ? 'PATCH' : 'POST';
+      return this.request<any>(endpoint, {
+        method,
+        body: JSON.stringify(employeeId ? { employeeId } : {}),
+      });
+    },
+
+    getAll: async (params?: {
+      employeeId?: string;
+      from?: string;
+      to?: string;
+      status?: string;
+      today?: boolean;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.employeeId) searchParams.set('employeeId', params.employeeId);
+      if (params?.from) searchParams.set('from', params.from);
+      if (params?.to) searchParams.set('to', params.to);
+      if (params?.status) searchParams.set('status', params.status);
+      if (params?.today !== undefined) searchParams.set('today', String(params.today));
+
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/attendance?${queryString}` : '/attendance';
+      return this.request<any[]>(endpoint);
+    },
+
+    getById: async (id: string) => this.request<any>(`/attendance/${id}`),
+
+    correct: async (
+      id: string,
+      data: {
+        checkIn?: string | null;
+        checkOut?: string | null;
+        workedHours?: number | null;
+        status?: string;
+        correctionNote: string;
+      }
+    ) =>
+      this.request<any>(`/attendance/${id}/correct`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  };
 }
 
 export const api = new ApiClient();

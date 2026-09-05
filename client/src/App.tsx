@@ -18,6 +18,7 @@ import { SalaryStructuresPage } from './pages/SalaryStructuresPage';
 import type { View, UserSession, UserRole } from './types';
 import { ShieldCheck } from 'lucide-react';
 import { api } from './lib/api';
+import { AttendanceWidget } from './components/AttendanceWidget';
 
 export function App() {
   const [userSession, setUserSession] = useState<UserSession | null>(null);
@@ -27,6 +28,7 @@ export function App() {
   const [selectedPayrunId, setSelectedPayrunId] = useState('p1');
   const [selectedPayslipId, setSelectedPayslipId] = useState('ps1');
   const [relatedEmployeeId, setRelatedEmployeeId] = useState<string | undefined>();
+  const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
 
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -86,7 +88,7 @@ export function App() {
       case 'job-positions': return <JobPositionsPage userSession={userSession} />;
       case 'working-schedules': return <WorkingSchedulesPage userSession={userSession} />;
       case 'contracts': return <ContractsPage employeeId={relatedEmployeeId} />;
-      case 'attendance': return <AttendancePage employeeId={relatedEmployeeId} />;
+      case 'attendance': return <AttendancePage employeeId={relatedEmployeeId} userSession={userSession} onNavigate={handleNavigate} refreshKey={attendanceRefreshKey} />;
       case 'time-off-requests':
       case 'time-off-allocations':
       case 'time-off-types': return <TimeOffRequestsPage onNavigate={handleNavigate} employeeId={relatedEmployeeId} />;
@@ -101,7 +103,34 @@ export function App() {
     }
   };
 
-  return <div className="flex h-screen bg-bg-app overflow-hidden font-sans text-ink-900 antialiased"><Sidebar current={currentView} onNavigate={(view) => handleNavigate(view)} userSession={userSession} onLogout={handleLogout} /><div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-app"><header className="h-12 bg-white border-b border-border px-6 flex items-center shrink-0"><div className="flex items-center gap-3"><span className="text-xs font-semibold text-ink-500 uppercase tracking-wider">Active Role:</span><div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-chartreuse-50 border border-chartreuse-200 text-ink-900 text-xs font-medium"><ShieldCheck size={14} className="text-chartreuse-600" /><span>{userSession.role}</span></div>{userSession.department && <span className="text-xs text-ink-500">Department: <strong>{userSession.department}</strong></span>}</div></header><main className="flex-1 overflow-y-auto px-8 py-6"><div className="max-w-7xl w-full mx-auto">{renderView()}</div></main></div></div>;
+  return (
+    <div className="flex h-screen bg-bg-app overflow-hidden font-sans text-ink-900 antialiased">
+      <Sidebar current={currentView} onNavigate={(view) => handleNavigate(view)} userSession={userSession} onLogout={handleLogout} />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-app">
+        <header className="h-12 bg-white border-b border-border px-6 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-ink-500 uppercase tracking-wider">Active Role:</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-chartreuse-50 border border-chartreuse-200 text-ink-900 text-xs font-medium">
+              <ShieldCheck size={14} className="text-chartreuse-600" />
+              <span>{userSession.role}</span>
+            </div>
+            {userSession.department && (
+              <span className="text-xs text-ink-500">Department: <strong>{userSession.department}</strong></span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <AttendanceWidget
+              userSession={userSession}
+              onAttendanceChange={() => setAttendanceRefreshKey((prev) => prev + 1)}
+            />
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto px-8 py-6">
+          <div className="max-w-7xl w-full mx-auto">{renderView()}</div>
+        </main>
+      </div>
+    </div>
+  );
 }
 
 export default App;

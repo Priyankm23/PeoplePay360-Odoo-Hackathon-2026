@@ -75,7 +75,7 @@ class WorkingScheduleService {
    */
   async getWorkingSchedules() {
     const schedules = await prisma.workingSchedule.findMany({
-      where: { isArchived: false },
+      where: {},
       include: {
         lines: { orderBy: { day: 'asc' } },
         _count: { select: { employees: true, contracts: true } },
@@ -93,7 +93,7 @@ class WorkingScheduleService {
    */
   async getWorkingScheduleById(scheduleId) {
     const schedule = await prisma.workingSchedule.findFirst({
-      where: { id: scheduleId, isArchived: false },
+      where: { id: scheduleId },
       include: {
         lines: { orderBy: { day: 'asc' } },
         _count: { select: { employees: true, contracts: true } },
@@ -189,6 +189,17 @@ class WorkingScheduleService {
       where: { id: scheduleId },
       data: { isArchived: true },
     });
+  }
+
+  async setArchived(scheduleId, isArchived) {
+    const existing = await prisma.workingSchedule.findUnique({ where: { id: scheduleId } });
+    if (!existing) throw ApiError.notFound('Working schedule not found', 'WORKING_SCHEDULE_NOT_FOUND');
+    const updated = await prisma.workingSchedule.update({
+      where: { id: scheduleId },
+      data: { isArchived },
+      include: { lines: true, _count: { select: { employees: true, contracts: true } } },
+    });
+    return formatWorkingScheduleResponse(updated);
   }
 }
 

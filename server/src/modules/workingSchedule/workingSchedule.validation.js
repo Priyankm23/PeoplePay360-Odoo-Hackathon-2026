@@ -47,6 +47,7 @@ const updateWorkingScheduleSchema = z.object({
 const workingScheduleIdSchema = z.object({
   id: z.string().uuid('Invalid Working Schedule ID'),
 });
+const archiveWorkingScheduleSchema = z.object({ isArchived: z.boolean() });
 
 module.exports = {
   WeekdayEnum,
@@ -55,4 +56,5 @@ module.exports = {
   createWorkingScheduleSchema,
   updateWorkingScheduleSchema,
   workingScheduleIdSchema,
+  archiveWorkingScheduleSchema,
 };

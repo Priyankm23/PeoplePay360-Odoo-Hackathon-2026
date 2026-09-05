@@ -2,6 +2,8 @@ const workingScheduleService = require('./workingSchedule.service');
 const {
   createWorkingScheduleSchema,
   updateWorkingScheduleSchema,
+  workingScheduleIdSchema,
+  archiveWorkingScheduleSchema,
 } = require('./workingSchedule.validation');
 const { ApiResponse } = require('../../utils/apiResponse');
 const asyncHandler = require('../../utils/asyncHandler');
@@ -50,8 +52,10 @@ class WorkingScheduleController {
    * Admin and HR Manager only - soft deletes (archives) an existing working schedule.
    */
   archiveWorkingSchedule = asyncHandler(async (req, res) => {
-    const data = await workingScheduleService.archiveWorkingSchedule(req.params.id);
-    return ApiResponse.success(res, data, 'Working schedule archived successfully');
+    const { id } = workingScheduleIdSchema.parse(req.params);
+    const { isArchived } = archiveWorkingScheduleSchema.parse(req.body);
+    const data = await workingScheduleService.setArchived(id, isArchived);
+    return ApiResponse.success(res, data, isArchived ? 'Working schedule archived successfully' : 'Working schedule reactivated successfully');
   });
 }
 
