@@ -140,6 +140,7 @@ class ApiClient {
       departmentId?: string;
       status?: 'ACTIVE' | 'INACTIVE';
       search?: string;
+      cursor?: string;
       page?: number;
       limit?: number;
     } = {}) => {
@@ -149,6 +150,7 @@ class ApiClient {
       if (params.departmentId) searchParams.append('departmentId', params.departmentId);
       if (params.status) searchParams.append('status', params.status);
       if (params.search) searchParams.append('search', params.search);
+      if (params.cursor) searchParams.append('cursor', params.cursor);
       if (params.page) searchParams.append('page', String(params.page));
       if (params.limit) searchParams.append('limit', String(params.limit));
 

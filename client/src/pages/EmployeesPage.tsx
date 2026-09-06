@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, List, LayoutGrid, Filter, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Filter, ShieldCheck, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
@@ -43,6 +43,12 @@ interface JobPositionItem {
   departmentId: string | null;
 }
 
+interface WorkingScheduleItem {
+  id: string;
+  name: string;
+  type: string;
+}
+
 export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
   // If an Employee role user accesses directory, redirect them immediately to their own profile
   useEffect(() => {
@@ -51,11 +57,19 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
     }
   }, [userSession, onNavigate]);
 
-  const canManageEmployees = userSession?.role === 'Admin' || userSession?.role === 'HR Manager';
+  const userRole = userSession?.role || '';
+  const canManageEmployees =
+    userRole === 'ADMIN' ||
+    userRole === 'HR_MANAGER' ||
+    userRole === 'HR_PAYROLL_MANAGER' ||
+    userRole === 'Admin' ||
+    userRole === 'HR Manager' ||
+    userRole === 'HR Payroll Manager';
 
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [jobPositions, setJobPositions] = useState<JobPositionItem[]>([]);
+  const [workingSchedules, setWorkingSchedules] = useState<WorkingScheduleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +77,14 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
   const [search, setSearch] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | null>(null);
+
+  // Cursor Pagination State
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   // Create Employee Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -79,6 +101,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
   const [departmentId, setDepartmentId] = useState('');
   const [jobPositionId, setJobPositionId] = useState('');
   const [managerId, setManagerId] = useState('');
+  const [workingScheduleId, setWorkingScheduleId] = useState('');
   const [issueLogin, setIssueLogin] = useState(true);
   const [role, setRole] = useState('EMPLOYEE');
 
@@ -95,20 +118,36 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const [empRes, deptRes, posRes] = await Promise.all([
+      const [empRes, deptRes, posRes, schedRes] = await Promise.all([
         api.employees.getAll({
           search: search || undefined,
           departmentId: selectedDeptId || undefined,
           status: statusFilter || undefined,
+          cursor: cursor || undefined,
+          limit: viewMode === 'kanban' ? 200 : pageSize,
         }),
-        api.departments.getAll(),
-        api.jobPositions.getAll(),
+        departments.length > 0 ? Promise.resolve(departments) : api.departments.getAll(),
+        jobPositions.length > 0 ? Promise.resolve(jobPositions) : api.jobPositions.getAll(),
+        workingSchedules.length > 0 ? Promise.resolve(workingSchedules) : api.workingSchedules.getAll(),
       ]);
 
-      const items = empRes?.items || empRes || [];
-      setEmployees(Array.isArray(items) ? items : []);
-      setDepartments(deptRes || []);
-      setJobPositions(posRes || []);
+      const items = empRes?.items || (Array.isArray(empRes) ? empRes : []);
+      const pagination = empRes?.pagination;
+
+      setEmployees(items);
+      if (pagination) {
+        setNextCursor(pagination.nextCursor || null);
+        setHasNextPage(Boolean(pagination.hasNextPage));
+        setTotalCount(pagination.totalCount ?? items.length);
+      } else {
+        setNextCursor(null);
+        setHasNextPage(false);
+        setTotalCount(items.length);
+      }
+
+      if (departments.length === 0) setDepartments(deptRes || []);
+      if (jobPositions.length === 0) setJobPositions(posRes || []);
+      if (workingSchedules.length === 0) setWorkingSchedules(Array.isArray(schedRes) ? schedRes : []);
     } catch (err: any) {
       setError(err.message || 'Failed to load employees from server');
     } finally {
@@ -116,9 +155,42 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
     }
   };
 
+  // Reset cursor history whenever filters or search change
+  useEffect(() => {
+    setCursor(null);
+    setCursorStack([null]);
+  }, [search, selectedDeptId, statusFilter, viewMode]);
+
   useEffect(() => {
     fetchData();
-  }, [search, selectedDeptId, statusFilter]);
+  }, [search, selectedDeptId, statusFilter, cursor, pageSize, viewMode]);
+
+  const handleNextPage = () => {
+    if (nextCursor && !isLoading) {
+      setCursorStack((prev) => [...prev, nextCursor]);
+      setCursor(nextCursor);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (cursorStack.length > 1 && !isLoading) {
+      const newStack = cursorStack.slice(0, -1);
+      const prevCursor = newStack[newStack.length - 1];
+      setCursorStack(newStack);
+      setCursor(prevCursor);
+    }
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCursor(null);
+    setCursorStack([null]);
+  };
+
+  const currentPage = cursorStack.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(startIndex + employees.length - 1, totalCount);
 
   // Client-side fallback grouping for Kanban
   const kanbanData = useMemo(() => {
@@ -155,6 +227,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
         departmentId: departmentId || undefined,
         jobPositionId: jobPositionId || undefined,
         managerId: managerId || undefined,
+        workingScheduleId: workingScheduleId || undefined,
         issueLogin,
         role: issueLogin ? role : undefined,
       });
@@ -169,6 +242,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
       setDepartmentId('');
       setJobPositionId('');
       setManagerId('');
+      setWorkingScheduleId('');
       setIssueLogin(true);
       setRole('EMPLOYEE');
       setIsCreateModalOpen(false);
@@ -198,7 +272,7 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
         subtitle={
           isLoading
             ? 'Fetching live employee records...'
-            : `${employees.length} employees across ${departments.length} departments`
+            : `${totalCount} total employees across ${departments.length} departments`
         }
         actions={
           <div className="flex items-center gap-2">
@@ -331,62 +405,120 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
           <p className="text-sm text-ink-400">No employees match the selected criteria.</p>
         </div>
       ) : viewMode === 'list' ? (
-        <Table className="[&>table]:table-fixed shadow-2xs">
-          <THead>
-            <TH className="w-[27%]">Employee</TH>
-            <TH className="w-[16%]">Department</TH>
-            <TH className="w-[18%]">Job Position</TH>
-            <TH className="w-[14%]">Manager</TH>
-            <TH className="w-[17%]">Role</TH>
-            <TH className="w-[8%]" align="center">Status</TH>
-          </THead>
-          <TBody>
-            {employees.map((emp) => (
-              <TR key={emp.id} onClick={() => onNavigate('employee-detail', emp.id)}>
-                <TD>
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      firstName={emp.firstName}
-                      lastName={emp.lastName}
-                      color="#059669"
-                      imageUrl={emp.profileImageUrl}
-                      size="sm"
-                    />
-                    <div>
-                      <div className="font-medium text-ink-900">
-                        {emp.firstName} {emp.lastName}
+        <div>
+          <Table className="[&>table]:table-fixed shadow-2xs rounded-b-none border-b-0">
+            <THead>
+              <TH className="w-[27%]">Employee</TH>
+              <TH className="w-[16%]">Department</TH>
+              <TH className="w-[18%]">Job Position</TH>
+              <TH className="w-[14%]">Manager</TH>
+              <TH className="w-[17%]">Role</TH>
+              <TH className="w-[8%]" align="center">Status</TH>
+            </THead>
+            <TBody>
+              {employees.map((emp) => (
+                <TR key={emp.id} onClick={() => onNavigate('employee-detail', emp.id)}>
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        firstName={emp.firstName}
+                        lastName={emp.lastName}
+                        color="#059669"
+                        imageUrl={emp.profileImageUrl}
+                        size="sm"
+                      />
+                      <div>
+                        <div className="font-medium text-ink-900">
+                          {emp.firstName} {emp.lastName}
+                        </div>
+                        <div className="text-xs text-ink-500">{emp.email}</div>
                       </div>
-                      <div className="text-xs text-ink-500">{emp.email}</div>
                     </div>
-                  </div>
-                </TD>
-                <TD className="text-ink-700">{emp.department?.name || '—'}</TD>
-                <TD className="text-ink-700">{emp.jobPosition?.title || '—'}</TD>
-                <TD>
-                  {emp.manager ? (
-                    <span className="text-ink-700 text-sm">
-                      {emp.manager.firstName} {emp.manager.lastName}
-                    </span>
-                  ) : (
-                    <span className="text-ink-300 text-xs">—</span>
-                  )}
-                </TD>
-                <TD>
-                  {emp.user ? (
-                    <span className="inline-block whitespace-nowrap text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      {formatRole(emp.user.role)}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-ink-400">No Login</span>
-                  )}
-                </TD>
-                <TD align="center">
-                  <StatusDot type={emp.status === 'ACTIVE' ? 'active' : 'inactive'} />
-                </TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
+                  </TD>
+                  <TD className="text-ink-700">{emp.department?.name || '—'}</TD>
+                  <TD className="text-ink-700">{emp.jobPosition?.title || '—'}</TD>
+                  <TD>
+                    {emp.manager ? (
+                      <span className="text-ink-700 text-sm">
+                        {emp.manager.firstName} {emp.manager.lastName}
+                      </span>
+                    ) : (
+                      <span className="text-ink-300 text-xs">—</span>
+                    )}
+                  </TD>
+                  <TD>
+                    {emp.user ? (
+                      <span className="inline-block whitespace-nowrap text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        {formatRole(emp.user.role)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-ink-400">No Login</span>
+                    )}
+                  </TD>
+                  <TD align="center">
+                    <StatusDot type={emp.status === 'ACTIVE' ? 'active' : 'inactive'} />
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+
+          {/* Cursor-based Pagination Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-surface border border-border rounded-b-lg text-xs text-ink-600 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="text-ink-500">
+                Showing <span className="font-semibold text-ink-900">{startIndex}</span> to{' '}
+                <span className="font-semibold text-ink-900">{endIndex}</span> of{' '}
+                <span className="font-semibold text-ink-900">{totalCount}</span> employees
+              </span>
+              <span className="text-ink-300">|</span>
+              <span className="text-ink-500">
+                Page <span className="font-semibold text-ink-900">{currentPage}</span>
+                {totalPages > 0 && <span> of {totalPages}</span>}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-ink-500 text-[11px]">Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="bg-paper border border-border text-ink-800 text-xs rounded px-2 py-1 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={cursorStack.length <= 1 || isLoading}
+                  className="px-2.5 py-1 text-xs flex items-center gap-1"
+                  title="Previous page"
+                >
+                  <ChevronLeft size={14} />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={!hasNextPage || isLoading}
+                  className="px-2.5 py-1 text-xs flex items-center gap-1"
+                  title="Next page"
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {Object.entries(kanbanData).map(([deptName, deptEmployees]) => (
@@ -614,22 +746,41 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
-              Manager
-            </label>
-            <select
-              value={managerId}
-              onChange={(e) => setManagerId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-border rounded-sm-md focus:outline-none focus:border-ink-400 bg-surface"
-            >
-              <option value="">No Direct Manager</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.firstName} {e.lastName} ({e.email})
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                Manager
+              </label>
+              <select
+                value={managerId}
+                onChange={(e) => setManagerId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-border rounded-sm-md focus:outline-none focus:border-ink-400 bg-surface"
+              >
+                <option value="">No Direct Manager</option>
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.firstName} {e.lastName} ({e.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                Working Schedule
+              </label>
+              <select
+                value={workingScheduleId}
+                onChange={(e) => setWorkingScheduleId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-border rounded-sm-md focus:outline-none focus:border-ink-400 bg-surface"
+              >
+                <option value="">Default (Standard 40h)</option>
+                {workingSchedules.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.type === 'FULL_TIME' ? 'Full-Time' : 'Part-Time'})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Issue Login Account Checkbox */}

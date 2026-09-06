@@ -42,8 +42,9 @@ const queryEmployeeSchema = z.object({
   departmentId: z.string().optional(),
   status: EmployeeStatusEnum.optional(),
   search: z.string().optional(),
+  cursor: z.string().optional(),
   page: z.string().transform((v) => Math.max(1, parseInt(v, 10) || 1)).optional().default('1'),
-  limit: z.string().transform((v) => Math.min(100, Math.max(1, parseInt(v, 10) || 20))).optional().default('20'),
+  limit: z.string().transform((v) => Math.min(500, Math.max(1, parseInt(v, 10) || 20))).optional().default('20'),
 });
 
 module.exports = {

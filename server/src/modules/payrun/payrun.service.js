@@ -769,6 +769,7 @@ class PayrunService {
       const grossSalary = Number(payslip.grossSalary || 0);
       const netSalary = Number(payslip.netSalary || 0);
       const deductions = Math.max(0, grossSalary - netSalary);
+      
       try {
         await sendPayslipStatementEmail({
           email: payslip.employee.email,

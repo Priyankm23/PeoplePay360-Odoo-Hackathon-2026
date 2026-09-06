@@ -10,7 +10,7 @@ class EmployeeService {
    * Get employees with List or Kanban view and filters
    */
   async getEmployees(query, user) {
-    const { view, groupBy, departmentId, status, search, page, limit } = query;
+    const { view, groupBy, departmentId, status, search, cursor, page, limit } = query;
 
     const where = {
       isArchived: false,
@@ -53,7 +53,7 @@ class EmployeeService {
       const employees = await prisma.employee.findMany({
         where,
         select: selectRelations,
-        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
       });
 
       if (groupBy === 'departmentId') {
@@ -75,18 +75,29 @@ class EmployeeService {
       }
     }
 
-    // LIST VIEW (Paginated)
-    const skip = (page - 1) * limit;
-    const [totalCount, items] = await Promise.all([
+    // LIST VIEW (Cursor-based & Paginated)
+    const findOptions = {
+      where,
+      select: selectRelations,
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+    };
+
+    if (cursor) {
+      findOptions.cursor = { id: cursor };
+      findOptions.skip = 1;
+    } else if (page && page > 1) {
+      findOptions.skip = (page - 1) * limit;
+    }
+
+    const [totalCount, rawItems] = await Promise.all([
       prisma.employee.count({ where }),
-      prisma.employee.findMany({
-        where,
-        select: selectRelations,
-        skip,
-        take: limit,
-        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-      }),
+      prisma.employee.findMany(findOptions),
     ]);
+
+    const hasNextPage = rawItems.length > limit;
+    const items = hasNextPage ? rawItems.slice(0, limit) : rawItems;
+    const nextCursor = hasNextPage && items.length > 0 ? items[items.length - 1].id : null;
 
     return {
       view: 'list',
@@ -94,8 +105,10 @@ class EmployeeService {
       pagination: {
         totalCount,
         totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
+        currentPage: page || 1,
         limit,
+        nextCursor,
+        hasNextPage,
       },
     };
   }
@@ -245,7 +258,7 @@ class EmployeeService {
         // Generate a random password when the administrator does not provide one.
         let rawPassword = data.password;
         if (!rawPassword) {
-          rawPassword = crypto.randomBytes(18).toString('base64url');
+          rawPassword = `PeoplePay@2026_${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
         }
 
         const passwordHash = await bcrypt.hash(rawPassword, 10);

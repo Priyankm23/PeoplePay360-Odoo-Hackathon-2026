@@ -81,14 +81,22 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // RBAC permissions
+  // RBAC permissions - all managerial roles can manage employee schedules
   const isSelf = userSession?.role === 'Employee';
   const roleStr = (userSession?.role || '').toUpperCase().replace(/\s+/g, '_');
   const canManage =
     roleStr === 'ADMIN' ||
     roleStr === 'HR_MANAGER' ||
+    roleStr === 'HR_PAYROLL_MANAGER' ||
     userSession?.role === 'Admin' ||
-    userSession?.role === 'HR Manager';
+    userSession?.role === 'HR Manager' ||
+    userSession?.role === 'HR Payroll Manager';
+
+  // Dedicated Change Working Schedule Modal State
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
+  const [scheduleUpdateError, setScheduleUpdateError] = useState<string | null>(null);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -99,6 +107,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
   const [editDeptId, setEditDeptId] = useState('');
   const [editPosId, setEditPosId] = useState('');
   const [editManagerId, setEditManagerId] = useState('');
+  const [editScheduleId, setEditScheduleId] = useState('');
   const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -109,10 +118,11 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
-  // Lookups for Edit Form
+  // Lookups for Edit Form & Schedule Modal
   const [deptList, setDeptList] = useState<Array<{ id: string; name: string }>>([]);
   const [posList, setPosList] = useState<Array<{ id: string; title: string; departmentId: string | null }>>([]);
   const [allEmployees, setAllEmployees] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+  const [scheduleList, setScheduleList] = useState<Array<{ id: string; name: string; type: string; daysPerWeek?: number; weeklyHours?: number }>>([]);
 
   const loadEmployee = async () => {
     setIsLoading(true);
@@ -133,6 +143,39 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
     }
   }, [employeeId]);
 
+  const openScheduleModal = async () => {
+    if (!employee) return;
+    setSelectedScheduleId(employee.workingSchedule?.id || '');
+    setScheduleUpdateError(null);
+    setIsScheduleModalOpen(true);
+
+    try {
+      const scheds = await api.workingSchedules.getAll();
+      setScheduleList(Array.isArray(scheds) ? scheds : []);
+    } catch {
+      // Ignore lookup loading error
+    }
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employee) return;
+    setIsUpdatingSchedule(true);
+    setScheduleUpdateError(null);
+
+    try {
+      await api.employees.update(employee.id, {
+        workingScheduleId: selectedScheduleId || null,
+      });
+      setIsScheduleModalOpen(false);
+      await loadEmployee();
+    } catch (err: any) {
+      setScheduleUpdateError(err.message || 'Failed to update working schedule');
+    } finally {
+      setIsUpdatingSchedule(false);
+    }
+  };
+
   const openEditModal = async () => {
     if (!employee) return;
     setEditFirstName(employee.firstName);
@@ -142,20 +185,23 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
     setEditDeptId(employee.department?.id || '');
     setEditPosId(employee.jobPosition?.id || '');
     setEditManagerId(employee.manager?.id || '');
+    setEditScheduleId(employee.workingSchedule?.id || '');
     setEditStatus(employee.status);
     setUpdateError(null);
     setIsEditModalOpen(true);
 
     try {
-      const [depts, poses, emps] = await Promise.all([
+      const [depts, poses, emps, scheds] = await Promise.all([
         api.departments.getAll(),
         api.jobPositions.getAll(),
         api.employees.getAll(),
+        api.workingSchedules.getAll(),
       ]);
       setDeptList(depts || []);
       setPosList(poses || []);
       const empItems = emps?.items || emps || [];
       setAllEmployees(Array.isArray(empItems) ? empItems.filter((e: any) => e.id !== employee.id) : []);
+      setScheduleList(Array.isArray(scheds) ? scheds : []);
     } catch {
       // Ignore lookup loading error
     }
@@ -176,6 +222,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
         departmentId: editDeptId || null,
         jobPositionId: editPosId || null,
         managerId: editManagerId || null,
+        workingScheduleId: editScheduleId || null,
         status: editStatus,
       });
 
@@ -432,24 +479,35 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
             )}
 
             {/* Working Schedule */}
-            {employee.workingSchedule && (
-              <div className="relative z-10 pt-3.5 border-t border-border-soft">
-                <div className="text-xs text-ink-500 mb-1.5 flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-ink-400">Working Schedule</span>
-                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
-                    {employee.workingSchedule.type === 'FULL_TIME' ? 'Full-Time' : 'Part-Time'}
-                  </span>
+            <div className="relative z-10 pt-3.5 border-t border-border-soft">
+              <div className="text-xs text-ink-500 mb-1.5 flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-ink-400">Working Schedule</span>
+                <div className="flex items-center gap-1.5">
+                  {employee.workingSchedule && (
+                    <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                      {employee.workingSchedule.type === 'FULL_TIME' ? 'Full-Time' : 'Part-Time'}
+                    </span>
+                  )}
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={openScheduleModal}
+                      className="text-[11px] text-brand-600 hover:text-brand-700 font-medium hover:underline flex items-center gap-0.5"
+                    >
+                      Change
+                    </button>
+                  )}
                 </div>
-                <div className="text-xs font-bold text-ink-900">
-                  {employee.workingSchedule.name}
-                </div>
-                {employee.workingSchedule.lines && (
-                  <div className="text-[11px] text-ink-400 mt-0.5">
-                    {employee.workingSchedule.lines.length} scheduled days / week
-                  </div>
-                )}
               </div>
-            )}
+              <div className="text-xs font-bold text-ink-900">
+                {employee.workingSchedule?.name || 'No schedule assigned'}
+              </div>
+              {employee.workingSchedule?.lines && (
+                <div className="text-[11px] text-ink-400 mt-0.5">
+                  {employee.workingSchedule.lines.length} scheduled days / week
+                </div>
+              )}
+            </div>
             <div className="pointer-events-none absolute inset-0 transform-gpu transition-all duration-300 group-hover:bg-black/[.02]" />
           </div>
         </div>
@@ -666,16 +724,28 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 <Clock size={16} className="text-emerald-600" />
                 Working Schedule & Hours Breakdown
               </h3>
-              {employee.workingSchedule && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-ink-700 bg-paper px-2.5 py-1 rounded border border-border">
-                    {employee.workingSchedule.name}
-                  </span>
-                  <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {employee.workingSchedule.type === 'FULL_TIME' ? 'Full Time' : 'Part Time'}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {employee.workingSchedule && (
+                  <>
+                    <span className="text-xs font-semibold text-ink-700 bg-paper px-2.5 py-1 rounded border border-border">
+                      {employee.workingSchedule.name}
+                    </span>
+                    <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {employee.workingSchedule.type === 'FULL_TIME' ? 'Full Time' : 'Part Time'}
+                    </span>
+                  </>
+                )}
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openScheduleModal}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    Change Schedule
+                  </Button>
+                )}
+              </div>
             </div>
 
             {employee.workingSchedule?.lines && employee.workingSchedule.lines.length > 0 ? (
@@ -919,6 +989,24 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                Working Schedule
+              </label>
+              <select
+                value={editScheduleId}
+                onChange={(e) => setEditScheduleId(e.target.value)}
+                className="w-full px-3 pr-8 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+              >
+                <option value="">No Schedule Assigned</option>
+                {scheduleList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.type === 'FULL_TIME' ? 'Full Time' : 'Part Time'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
               <Button
                 type="button"
@@ -931,6 +1019,58 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={isUpdating}>
                 {isUpdating ? 'Saving...' : 'Save Profile Changes'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Change Working Schedule Modal */}
+      {canManage && (
+        <Modal
+          open={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          title="Change Working Schedule"
+        >
+          <form onSubmit={handleSaveSchedule} className="space-y-4">
+            {scheduleUpdateError && (
+              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
+                {scheduleUpdateError}
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wider mb-1">
+                Select Working Schedule
+              </label>
+              <select
+                value={selectedScheduleId}
+                onChange={(e) => setSelectedScheduleId(e.target.value)}
+                className="w-full px-3 pr-8 py-2 text-sm border border-border rounded-sm-md bg-surface focus:outline-none focus:border-ink-400"
+              >
+                <option value="">No Schedule Assigned</option>
+                {scheduleList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.type === 'FULL_TIME' ? 'Full Time' : 'Part Time'})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-ink-400 mt-1.5">
+                Changing the working schedule will adjust the employee's standard shift times, daily work hours, and attendance baseline calculations.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setIsScheduleModalOpen(false)}
+                disabled={isUpdatingSchedule}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="md" disabled={isUpdatingSchedule}>
+                {isUpdatingSchedule ? 'Saving...' : 'Update Schedule'}
               </Button>
             </div>
           </form>

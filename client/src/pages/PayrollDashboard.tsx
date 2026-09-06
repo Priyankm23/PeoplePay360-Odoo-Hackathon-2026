@@ -128,28 +128,39 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
   const maxDeptAmount = Math.max(...salaryByDept.map((d: any) => d.amount), 1000);
   const totalSalaryCost = salaryByDept.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
 
-  // Monthly trend calculations with calibrated dynamic Y-axis scale (matching HR Attendance curve depth)
+  // Monthly trend calculations with calibrated dynamic Y-axis scale (always 4-5 clean, nicely spaced ticks)
   const trendVals = monthlyTrend.map((m: any) => Number(m.value || 0)).filter((v: number) => v > 0);
   const rawTrendMax = trendVals.length > 0 ? Math.max(...trendVals) : 100000;
-  const rawTrendMin = trendVals.length > 0 ? Math.min(...trendVals) : 50000;
 
-  const step = rawTrendMax > 250000 ? 50000 : rawTrendMax > 150000 ? 25000 : 15000;
-  const yMin = Math.max(0, Math.floor((rawTrendMin * 0.75) / step) * step);
-  const yMax = Math.ceil((rawTrendMax * 1.18) / step) * step;
+  // Target 4 intervals (5 ticks)
+  const targetIntervals = 4;
+  const roughStep = (rawTrendMax * 1.15) / targetIntervals;
+
+  // Round step to clean intervals (1, 2, 2.5, 5, 10 x 10^k)
+  const exponent = Math.floor(Math.log10(Math.max(1, roughStep)));
+  const base = Math.pow(10, exponent);
+  const fraction = roughStep / base;
+
+  let niceMultiplier = 1;
+  if (fraction > 5) niceMultiplier = 10;
+  else if (fraction > 2.5) niceMultiplier = 5;
+  else if (fraction > 1.5) niceMultiplier = 2.5;
+  else if (fraction > 1) niceMultiplier = 2;
+
+  const step = Math.max(1000, niceMultiplier * base);
+  const yMin = 0;
+  const yMax = Math.ceil((rawTrendMax * 1.15) / step) * step;
   const ySpan = Math.max(step, yMax - yMin);
 
   const yTicks: number[] = [];
-  for (let t = yMax; t >= yMin; t -= step) {
+  for (let t = yMax; t >= 0; t -= step) {
     yTicks.push(t);
   }
-  if (yTicks[yTicks.length - 1] !== yMin) {
-    yTicks.push(yMin);
-  }
 
-  // Proportional "little wide" SVG dimensions (balanced, not stretched out)
+  // Proportional SVG dimensions
   const svgWidth = 540;
   const svgHeight = 175;
-  const plotLeft = 52;
+  const plotLeft = 56;
   const plotRight = 515;
   const plotTop = 26;
   const plotBottom = 135;
