@@ -141,19 +141,13 @@ export function AuthLandingPage({ onLogin }: AuthLandingPageProps) {
   return (
     <div className="h-screen overflow-hidden bg-white text-ink-900 flex flex-col font-sans selection:bg-chartreuse-200 selection:text-ink-900">
       {/* Expansive Warm Top Header */}
-      <header className="h-14 bg-white border-b border-[#DADDD9] px-5 lg:px-10 flex items-center justify-between shrink-0 z-30 shadow-xs">
+      <header className="h-20 bg-white border-b border-[#DADDD9] px-6 lg:px-12 flex items-center justify-between shrink-0 z-30 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-ink-900 flex items-center justify-center shadow-sm">
-            <CircleDollarSign size={20} className="text-chartreuse-300" />
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="font-extrabold text-base tracking-tight text-ink-900">
-              PeoplePay<span className="text-chartreuse-600">360</span>
-            </span>
-            <span className="hidden sm:inline text-[11px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-chartreuse-100/80 text-chartreuse-900 border border-chartreuse-300/60">
-              HR & Payroll
-            </span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="PeoplePay360"
+            className="h-14 sm:h-16 md:h-[68px] w-auto object-contain select-none"
+          />
         </div>
 
         {/* Dynamic Section Navigation Tabs */}

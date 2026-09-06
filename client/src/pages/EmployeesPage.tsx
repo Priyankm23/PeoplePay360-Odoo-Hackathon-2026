@@ -399,45 +399,76 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
                   {deptEmployees.length}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {deptEmployees.map((emp) => (
                   <div
                     key={emp.id}
                     onClick={() => onNavigate('employee-detail', emp.id)}
-                    className="border border-border bg-surface rounded-sm-md p-3 cursor-pointer hover:border-ink-400 shadow-2xs hover:shadow-xs transition-all"
+                    className="group relative overflow-hidden rounded-xl border border-border/80 bg-white p-3.5 [box-shadow:0_0_0_1px_rgba(0,0,0,.03),0_2px_4px_rgba(0,0,0,.05),0_12px_24px_rgba(0,0,0,.05)] hover:border-emerald-500/40 hover:shadow-xs cursor-pointer transition-all space-y-2.5"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
+                    {/* Subtle Corner Ambient Graphic */}
+                    <img
+                      src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=300&q=80"
+                      alt=""
+                      className="absolute -right-5 -top-5 w-24 h-20 object-cover rounded-xl opacity-10 filter grayscale group-hover:grayscale-0 group-hover:opacity-25 transition-all duration-300 pointer-events-none"
+                    />
+
+                    {/* Top Row: Avatar, Name, Title, and Status */}
+                    <div className="relative z-10 flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar
                           firstName={emp.firstName}
                           lastName={emp.lastName}
                           color="#059669"
                           imageUrl={emp?.profileImageUrl}
                           size="sm"
+                          className="ring-2 ring-emerald-100/80 shadow-2xs transform-gpu transition-all duration-200 group-hover:scale-105"
                         />
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-ink-900 truncate">
+                          <div className="text-sm font-bold text-ink-900 truncate group-hover:text-emerald-950 transition-colors">
                             {emp.firstName} {emp.lastName}
                           </div>
-                          <div className="text-xs text-ink-500 truncate">
+                          <div className="text-xs text-ink-500 truncate font-medium">
                             {emp.jobPosition?.title || 'Team Member'}
                           </div>
                         </div>
                       </div>
-                      <StatusDot type={emp.status === 'ACTIVE' ? 'active' : 'inactive'} showLabel={false} />
+
+                      {/* Light status badge */}
+                      <div className="shrink-0 pt-0.5">
+                        {emp.status === 'ACTIVE' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                            Inactive
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {emp.user && (
-                      <div className="mt-2.5 pt-2 border-t border-border-soft flex items-center justify-between text-[11px]">
-                        <span className="text-ink-400 font-medium">Role</span>
-                        <span className="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+
+                    {/* Compact Footer (lightweight meta) */}
+                    <div className="relative z-10 pt-2 border-t border-border-soft flex items-center justify-between text-[11px]">
+                      <span className="text-ink-400 truncate max-w-[150px] font-mono text-[10px]">
+                        {emp.email}
+                      </span>
+                      {emp.user ? (
+                        <span className="font-semibold text-emerald-800 bg-emerald-50/90 px-1.5 py-0.5 rounded text-[10px] border border-emerald-200 shrink-0">
                           {formatRole(emp.user.role)}
                         </span>
-                      </div>
-                    )}
+                      ) : (
+                        <span className="text-ink-400 text-[10px]">Employee</span>
+                      )}
+                    </div>
+
+                    <div className="pointer-events-none absolute inset-0 transform-gpu transition-all duration-300 group-hover:bg-black/[.02]" />
                   </div>
                 ))}
                 {deptEmployees.length === 0 && (
-                  <div className="text-xs text-ink-300 text-center py-6 border border-dashed border-border rounded-sm-md">
+                  <div className="text-xs text-ink-300 text-center py-6 border border-dashed border-border/80 rounded-xl bg-paper/30">
                     No employees
                   </div>
                 )}

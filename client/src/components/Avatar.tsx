@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 interface AvatarProps {
   firstName: string;
   lastName: string;
-  color: string;
+  color?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
   imageUrl?: string | null;
@@ -17,16 +17,18 @@ const sizeMap = {
   lg: 'w-16 h-16 text-lg',
 };
 
-export function Avatar({ firstName, lastName, color, size = 'sm', className, imageUrl, onClick }: AvatarProps) {
+export function Avatar({ firstName, lastName, color = '#047857', size = 'sm', className, imageUrl, onClick }: AvatarProps) {
   const initials = `${firstName[0] || ''}${lastName[0] || ''}`;
+  const isTailwindBg = color && (color.startsWith('bg-') || color.startsWith('text-'));
   return (
     <div
       className={cn(
         'inline-flex items-center justify-center rounded-full font-medium shrink-0 text-white',
         sizeMap[size],
+        isTailwindBg ? color : undefined,
         className
       )}
-      style={{ backgroundColor: color }}
+      style={!isTailwindBg && color ? { backgroundColor: color } : undefined}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}

@@ -1,14 +1,15 @@
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps {
   children: ReactNode;
   variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'dangerOutline';
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
   disabled?: boolean;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
   className?: string;
   type?: 'button' | 'submit';
+  title?: string;
 }
 
 export function Button({
@@ -19,10 +20,12 @@ export function Button({
   onClick,
   className,
   type = 'button',
+  title,
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center gap-2 font-medium rounded-sm-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap';
+    'inline-flex items-center justify-center gap-1.5 font-medium rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap';
   const sizes = {
+    xs: 'text-xs px-2.5 py-1',
     sm: 'text-xs px-3 py-1.5',
     md: 'text-sm px-4 py-2',
   };
@@ -37,6 +40,7 @@ export function Button({
   return (
     <button
       type={type}
+      title={title}
       className={cn(base, sizes[size], variants[variant], className)}
       disabled={disabled}
       onClick={onClick}

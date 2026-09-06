@@ -202,8 +202,8 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
         {/* Company & Document Header */}
         <div className="flex items-start justify-between border-b border-border pb-6">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-ink-900 tracking-tight">PeoplePay360</span>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="PeoplePay360" className="h-12 w-auto object-contain" />
               <span className="px-2.5 py-0.5 rounded bg-chartreuse-100 text-chartreuse-800 text-[11px] font-bold uppercase tracking-wider">
                 Official Payslip
               </span>

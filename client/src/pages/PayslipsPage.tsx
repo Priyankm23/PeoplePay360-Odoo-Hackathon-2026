@@ -32,7 +32,7 @@ export function PayslipsPage({ onNavigate, userSession }: PayslipsPageProps) {
       const res = await api.payslips.getAll({
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
       });
-      const data = Array.isArray(res) ? res : res?.data || [];
+      const data = Array.isArray(res) ? res : [];
       setPayslipsList(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch payslips');

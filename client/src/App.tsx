@@ -91,7 +91,20 @@ export function App() {
       case 'attendance': return <AttendancePage employeeId={relatedEmployeeId} userSession={userSession} onNavigate={handleNavigate} refreshKey={attendanceRefreshKey} />;
       case 'time-off-requests':
       case 'time-off-allocations':
-      case 'time-off-types': return <TimeOffRequestsPage onNavigate={handleNavigate} employeeId={relatedEmployeeId} />;
+      case 'time-off-types': return (
+        <TimeOffRequestsPage
+          onNavigate={handleNavigate}
+          employeeId={relatedEmployeeId}
+          initialTab={
+            currentView === 'time-off-allocations'
+              ? 'allocations'
+              : currentView === 'time-off-types'
+              ? 'types'
+              : 'requests'
+          }
+          userSession={userSession}
+        />
+      );
       case 'payroll-dashboard': return <PayrollDashboard userSession={userSession} onNavigate={handleNavigate} />;
       case 'payruns': return <PayrunsPage onNavigate={handleNavigate} userSession={userSession} />;
       case 'payrun-detail': return <PayrunDetailPage payrunId={selectedPayrunId} onNavigate={handleNavigate} userSession={userSession} />;

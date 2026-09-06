@@ -163,7 +163,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
     if (e) e.stopPropagation();
     setEditingStructure(structure);
     setStructureName(structure.name);
-    setStructureIsActive(structure.isActive);
+    setStructureIsActive(structure.isActive ?? structure.active ?? true);
     setStructureFormError(null);
     setIsStructureModalOpen(true);
   };
@@ -251,7 +251,7 @@ export function SalaryStructuresPage({ initialTab = 'structures', userSession, o
     setRuleCode(rule.code);
     setRuleCategory((rule.category as SalaryRuleCategory) || 'ALLOWANCE');
     setRuleSequence(rule.sequence);
-    setRuleMethod(rule.computationMethod);
+    setRuleMethod(rule.computationMethod || 'FIXED');
     setRuleFixedAmount(rule.fixedAmount !== null && rule.fixedAmount !== undefined ? String(rule.fixedAmount) : '0');
     setRulePercentage(rule.percentage !== null && rule.percentage !== undefined ? String(rule.percentage) : '40');
     setRuleBaseRuleId(rule.baseRuleId || '');

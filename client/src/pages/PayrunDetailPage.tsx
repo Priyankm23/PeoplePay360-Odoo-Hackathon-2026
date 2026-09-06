@@ -468,7 +468,7 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
             </THead>
             <TBody>
               {payslipsList.map((payslip) => {
-                const warningsCount = payslip.warnings ? payslip.warnings.length : 0;
+                const warningsCount = Array.isArray(payslip.warnings) ? payslip.warnings.length : (payslip.warnings || 0);
                 const isBlocking = payslip.hasBlockingWarnings;
 
                 return (
@@ -495,10 +495,10 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
                       </div>
                     </TD>
                     <TD className="text-xs text-ink-600 font-mono">
-                      {payslip.contractRef || '—'}
+                      {payslip.contract?.reference || '—'}
                     </TD>
                     <TD align="right" className="tnum text-xs text-ink-700">
-                      {formatCurrency(payslip.wage || 0)}
+                      {formatCurrency(payslip.contract?.wage || 0)}
                     </TD>
                     <TD align="right" className="tnum text-xs font-medium text-ink-900">
                       {payslip.workedDays ?? 0} days

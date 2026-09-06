@@ -17,6 +17,8 @@ import {
   BarChart3,
   Briefcase,
   FileText,
+  CalendarCheck,
+  CalendarOff,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/Button';
@@ -119,17 +121,30 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
   const attendance = data?.attendanceOverview || { distribution: {}, missingCheckouts: 0, manualEdits: 0, coveragePct: 94 };
   const timeOffOverview = data?.timeOffOverview || [];
   const deptOverview = data?.departmentOverview || [];
+  const headcountByDept = data?.headcountByDepartment || [];
+  const attendanceTrend = data?.monthlyAttendanceTrend || [];
 
   // Salary by dept calculations
   const maxDeptAmount = Math.max(...salaryByDept.map((d: any) => d.amount), 1000);
   const totalSalaryCost = salaryByDept.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
 
-  // Monthly trend calculations with Y-axis scale and point badges
-  const rawTrendMax = Math.max(...monthlyTrend.map((m: any) => m.value || 0), 50000);
-  const targetMax = rawTrendMax * 1.25; // 25% padding on top for value badges
-  const step = targetMax > 200000 ? 50000 : targetMax > 100000 ? 25000 : targetMax > 50000 ? 10000 : 5000;
-  const yMax = Math.max(Math.ceil(targetMax / step) * step, 50000);
-  const yTicks = [yMax, yMax * 0.75, yMax * 0.5, yMax * 0.25, 0];
+  // Monthly trend calculations with calibrated dynamic Y-axis scale (matching HR Attendance curve depth)
+  const trendVals = monthlyTrend.map((m: any) => Number(m.value || 0)).filter((v: number) => v > 0);
+  const rawTrendMax = trendVals.length > 0 ? Math.max(...trendVals) : 100000;
+  const rawTrendMin = trendVals.length > 0 ? Math.min(...trendVals) : 50000;
+
+  const step = rawTrendMax > 250000 ? 50000 : rawTrendMax > 150000 ? 25000 : 15000;
+  const yMin = Math.max(0, Math.floor((rawTrendMin * 0.75) / step) * step);
+  const yMax = Math.ceil((rawTrendMax * 1.18) / step) * step;
+  const ySpan = Math.max(step, yMax - yMin);
+
+  const yTicks: number[] = [];
+  for (let t = yMax; t >= yMin; t -= step) {
+    yTicks.push(t);
+  }
+  if (yTicks[yTicks.length - 1] !== yMin) {
+    yTicks.push(yMin);
+  }
 
   // Proportional "little wide" SVG dimensions (balanced, not stretched out)
   const svgWidth = 540;
@@ -145,35 +160,60 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
   const trendPoints = monthlyTrend.map((m: any, i: number) => {
     const n = monthlyTrend.length;
     const x = n > 1 ? (plotLeft + innerPad) + (i / (n - 1)) * (plotWidth - 2 * innerPad) : (plotLeft + plotRight) / 2;
-    const y = plotBottom - (Math.min(m.value || 0, yMax) / yMax) * plotHeight;
+    const clampedVal = Math.max(yMin, Math.min(yMax, m.value || 0));
+    const y = plotBottom - ((clampedVal - yMin) / ySpan) * plotHeight;
     return { x, y, ...m };
   });
 
-  // Status split percentages
+  // HR Attendance Trend SVG calculations
+  const attRates = attendanceTrend.map((a: any) => Number(a.attendanceRate ?? 95));
+  const minRate = attRates.length > 0 ? Math.min(...attRates) : 85;
+  const attYMin = Math.max(0, Math.min(80, Math.floor((minRate - 2) / 5) * 5));
+  const attYMax = 100;
+  const attRange = Math.max(10, attYMax - attYMin);
+
+  const attStep = attRange <= 20 ? 5 : 10;
+  const attYTicks: number[] = [];
+  for (let t = attYMax; t >= attYMin; t -= attStep) {
+    attYTicks.push(t);
+  }
+
+  const attPoints = attendanceTrend.map((m: any, i: number) => {
+    const n = attendanceTrend.length;
+    const x = n > 1 ? (plotLeft + innerPad) + (i / (n - 1)) * (plotWidth - 2 * innerPad) : (plotLeft + plotRight) / 2;
+    const rate = Number(m.attendanceRate ?? 95);
+    const clampedRate = Math.max(attYMin, Math.min(attYMax, rate));
+    const y = plotBottom - ((clampedRate - attYMin) / attRange) * plotHeight;
+    return { x, y, rate, ...m };
+  });
+
+  // Status split percentages (Payroll)
   const splitTotal = statusSplit.total || (statusSplit.paid + statusSplit.validated + statusSplit.computed + statusSplit.draft) || 1;
   const pctPaid = (statusSplit.paid / splitTotal) * 100;
   const pctValidated = (statusSplit.validated / splitTotal) * 100;
   const pctComputed = (statusSplit.computed / splitTotal) * 100;
   const pctDraft = (statusSplit.draft / splitTotal) * 100;
 
+  // Status split percentages (HR Attendance)
+  const attDist = attendance.distribution || {};
+  const totalAttLogs = (attDist.present || 0) + (attDist.late || 0) + (attDist.absent || 0) + (attDist.overtime || 0) || 1;
+  const attPctPresent = ((attDist.present || 0) / totalAttLogs) * 100;
+  const attPctLate = ((attDist.late || 0) / totalAttLogs) * 100;
+  const attPctAbsent = ((attDist.absent || 0) / totalAttLogs) * 100;
+  const attPctOvertime = ((attDist.overtime || 0) / totalAttLogs) * 100;
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Top Banner Notice for HR Manager */}
-      {isHRManager && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm-md flex items-center gap-2.5 text-xs text-amber-800">
-          <Lock size={14} className="text-amber-600 shrink-0" />
-          <span>
-            <strong>HR Manager View:</strong> Operational, attendance, and leave metrics are visible. Financial and salary payout figures are restricted per security policy.
-          </span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900 tracking-tight">Payroll Dashboard</h1>
+          <h1 className="text-2xl font-bold text-ink-900 tracking-tight">
+            {isHRManager ? 'HR Operations Dashboard' : 'Payroll Dashboard'}
+          </h1>
           <p className="text-xs text-ink-500 mt-1">
-            Dashboard should help payroll/HR users understand payments, staffing impact, leave patterns, and attendance quality for the selected period.
+            {isHRManager
+              ? 'Workforce headcount, attendance health, leave tracking, and department staffing distribution.'
+              : 'Dashboard should help payroll/HR users understand payments, staffing impact, leave patterns, and attendance quality for the selected period.'}
           </p>
         </div>
 
@@ -246,92 +286,288 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
 
       {/* Row 1: Top 5 KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* KPI 1: Total Net Salary Paid */}
-        <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
-          <div className="text-xs md:text-sm text-ink-600 font-semibold">Total Net Salary Paid</div>
-          <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
-            {isHRManager ? (
-              <span className="text-sm text-ink-400 italic font-normal">Restricted</span>
-            ) : (
-              formatIndianLakhs(kpis.totalNetSalaryPaid || 0)
-            )}
-          </div>
-          {!isHRManager && (
-            <div className="flex items-center gap-1 text-xs text-emerald-700 font-medium">
-              <TrendingUp size={13} />
-              <span>+{kpis.netTrendPct ?? 8.8}% vs previous month</span>
+        {isHRManager ? (
+          <>
+            {/* HR KPI 1: Active Employees */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs md:text-sm text-ink-600 font-semibold">Active Employees</span>
+                <Users size={14} className="text-ink-400" />
+              </div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {kpis.activeEmployees ?? 0}
+              </div>
+              <div className="text-xs text-ink-500">Across active departments</div>
             </div>
-          )}
-        </div>
 
-        {/* KPI 2: Payslips Generated */}
-        <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
-          <div className="text-xs md:text-sm text-ink-600 font-semibold">Payslips Generated</div>
-          <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
-            {kpis.payslipsGenerated?.total ?? 0}
-          </div>
-          <div className="text-xs text-ink-600 tnum">
-            <span className="text-emerald-700 font-semibold">{kpis.payslipsGenerated?.paid ?? 0} paid</span>
-            {', '}
-            <span className="text-amber-700 font-semibold">{kpis.payslipsGenerated?.pending ?? 0} pending</span>
-          </div>
-        </div>
+            {/* HR KPI 2: Attendance Health */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs md:text-sm text-ink-600 font-semibold">Attendance Health</span>
+                <CalendarCheck size={14} className="text-emerald-600" />
+              </div>
+              <div className="text-2xl font-bold text-emerald-700 tnum tracking-tight">
+                {kpis.attendanceHealthPct ?? 94}%
+              </div>
+              <div className="text-xs text-ink-500">Present / reviewed records</div>
+            </div>
 
-        {/* KPI 3: Avg Salary / Employee */}
-        <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
-          <div className="text-xs md:text-sm text-ink-600 font-semibold">Avg Salary / Employee</div>
-          <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
-            {isHRManager ? (
-              <span className="text-sm text-ink-400 italic font-normal">Restricted</span>
-            ) : (
-              formatCurrency(kpis.averageSalary || 0)
-            )}
-          </div>
-          <div className="text-xs text-ink-500">Based on current payrun</div>
-        </div>
+            {/* HR KPI 3: Pending Leave Requests */}
+            <div
+              onClick={() => onNavigate?.('time-off-requests')}
+              className="p-4 bg-surface border border-border hover:border-amber-400 rounded-lg shadow-2xs space-y-1.5 cursor-pointer transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs md:text-sm text-ink-600 font-semibold">Pending Leaves</span>
+                {(kpis.pendingLeaveRequests ?? 0) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 animate-pulse">
+                    Action
+                  </span>
+                )}
+              </div>
+              <div className="text-2xl font-bold text-amber-700 tnum tracking-tight">
+                {kpis.pendingLeaveRequests ?? 0}
+              </div>
+              <div className="text-xs text-ink-500 group-hover:text-amber-700 flex items-center gap-1">
+                <span>Awaiting decision</span>
+                <ChevronRight size={12} />
+              </div>
+            </div>
 
-        {/* KPI 4: Approved Time Off Days */}
-        <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
-          <div className="text-xs md:text-sm text-ink-600 font-semibold">Approved Time Off Days</div>
-          <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
-            {kpis.approvedTimeOff?.label ?? '0 Days'}
-          </div>
-          <div className="text-xs text-ink-500">across selected period</div>
-        </div>
+            {/* HR KPI 4: Approved Time Off */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs md:text-sm text-ink-600 font-semibold">Approved Leaves</span>
+                <CalendarOff size={14} className="text-ink-400" />
+              </div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {kpis.approvedTimeOff?.label ?? '0 Days'}
+              </div>
+              <div className="text-xs text-ink-500">Across selected period</div>
+            </div>
 
-        {/* KPI 5: Attendance Health */}
-        <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
-          <div className="text-xs md:text-sm text-ink-600 font-semibold">Attendance Health</div>
-          <div className="text-2xl font-bold text-emerald-700 tnum tracking-tight">
-            {kpis.attendanceHealthPct ?? 94}%
-          </div>
-          <div className="text-xs text-ink-500">Present / reviewed records</div>
-        </div>
+            {/* HR KPI 5: Expiring Contracts */}
+            <div
+              onClick={() => onNavigate?.('contracts')}
+              className="p-4 bg-surface border border-border hover:border-blue-400 rounded-lg shadow-2xs space-y-1.5 cursor-pointer transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs md:text-sm text-ink-600 font-semibold">Expiring Contracts</span>
+                <FileText size={14} className="text-ink-400" />
+              </div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {kpis.expiringContracts ?? 0}
+              </div>
+              <div className="text-xs text-ink-500 group-hover:text-blue-700 flex items-center gap-1">
+                <span>Next 30 days</span>
+                <ChevronRight size={12} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Payroll KPI 1: Total Net Salary Paid */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="text-xs md:text-sm text-ink-600 font-semibold">Total Net Salary Paid</div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {formatIndianLakhs(kpis.totalNetSalaryPaid || 0)}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-emerald-700 font-medium">
+                <TrendingUp size={13} />
+                <span>+{kpis.netTrendPct ?? 8.8}% vs previous month</span>
+              </div>
+            </div>
+
+            {/* Payroll KPI 2: Payslips Generated */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="text-xs md:text-sm text-ink-600 font-semibold">Payslips Generated</div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {kpis.payslipsGenerated?.total ?? 0}
+              </div>
+              <div className="text-xs text-ink-600 tnum">
+                <span className="text-emerald-700 font-semibold">{kpis.payslipsGenerated?.paid ?? 0} paid</span>
+                {', '}
+                <span className="text-amber-700 font-semibold">{kpis.payslipsGenerated?.pending ?? 0} pending</span>
+              </div>
+            </div>
+
+            {/* Payroll KPI 3: Avg Salary / Employee */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="text-xs md:text-sm text-ink-600 font-semibold">Avg Salary / Employee</div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {formatCurrency(kpis.averageSalary || 0)}
+              </div>
+              <div className="text-xs text-ink-500">Based on current payrun</div>
+            </div>
+
+            {/* Payroll KPI 4: Approved Time Off Days */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="text-xs md:text-sm text-ink-600 font-semibold">Approved Time Off Days</div>
+              <div className="text-2xl font-bold text-ink-900 tnum tracking-tight">
+                {kpis.approvedTimeOff?.label ?? '0 Days'}
+              </div>
+              <div className="text-xs text-ink-500">across selected period</div>
+            </div>
+
+            {/* Payroll KPI 5: Attendance Health */}
+            <div className="p-4 bg-surface border border-border rounded-lg shadow-2xs space-y-1.5">
+              <div className="text-xs md:text-sm text-ink-600 font-semibold">Attendance Health</div>
+              <div className="text-2xl font-bold text-emerald-700 tnum tracking-tight">
+                {kpis.attendanceHealthPct ?? 94}%
+              </div>
+              <div className="text-xs text-ink-500">Present / reviewed records</div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Row 2: Monthly Net Salary Trend (Dedicated Row, Proportional "Little Wide") */}
+      {/* Row 2: Monthly Trend (Salary for Payroll / Attendance for HR) */}
       <div className="p-5 bg-surface border border-border rounded-lg shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-ink-900 tracking-tight">Monthly Net Salary Trend</h3>
+              <h3 className="text-base font-bold text-ink-900 tracking-tight">
+                {isHRManager ? 'Monthly Workforce Attendance Trend' : 'Monthly Net Salary Trend'}
+              </h3>
               <TrendingUp size={18} className="text-emerald-700" />
             </div>
-            <p className="text-xs text-ink-500 mt-0.5">Source: Historical Payslips / Payruns across past 6 months</p>
+            <p className="text-xs text-ink-500 mt-0.5">
+              {isHRManager
+                ? 'Source: Historical attendance logs & approved time off across past 6 months'
+                : 'Source: Historical Payslips / Payruns across past 6 months'}
+            </p>
           </div>
-          {!isHRManager && monthlyTrend.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs px-3 py-1 rounded-full bg-paper border border-border-soft text-ink-600 font-medium">
-                Latest: <strong className="text-ink-900">{formatIndianLakhs(monthlyTrend[monthlyTrend.length - 1]?.value || 0)}</strong>
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-3 py-1 rounded-full bg-paper border border-border-soft text-ink-600 font-medium">
+              {isHRManager ? (
+                <>
+                  Latest Attendance:{' '}
+                  <strong className="text-emerald-700">
+                    {attendanceTrend[attendanceTrend.length - 1]?.attendanceRate ?? 94}%
+                  </strong>
+                </>
+              ) : (
+                <>
+                  Latest:{' '}
+                  <strong className="text-ink-900">
+                    {formatIndianLakhs(monthlyTrend[monthlyTrend.length - 1]?.value || 0)}
+                  </strong>
+                </>
+              )}
+            </span>
+          </div>
         </div>
 
         {isHRManager ? (
-          <div className="py-14 text-center text-xs text-ink-400 italic">
-            Trend data hidden for HR Manager role.
-          </div>
+          attendanceTrend.length === 0 ? (
+            <div className="py-14 text-center text-xs text-ink-400">No attendance trend history available.</div>
+          ) : (
+            <div className="max-w-3xl mx-auto w-full relative pt-1">
+              <svg className="w-full h-auto overflow-visible" viewBox="0 0 540 185">
+                <defs>
+                  <linearGradient id="hrTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity="0.01" />
+                  </linearGradient>
+                </defs>
+
+                {/* Y-axis gridlines and scale labels */}
+                {attYTicks.map((t, idx) => {
+                  const y = plotBottom - ((t - attYMin) / (attRange || 1)) * plotHeight;
+                  return (
+                    <g key={idx}>
+                      <line
+                        x1={plotLeft}
+                        y1={y}
+                        x2={plotRight}
+                        y2={y}
+                        stroke="#E5E7EB"
+                        strokeWidth={idx === attYTicks.length - 1 ? 1.5 : 1}
+                        strokeDasharray={idx === attYTicks.length - 1 ? undefined : '2 3'}
+                      />
+                      <text
+                        x={plotLeft - 6}
+                        y={y + 3.5}
+                        textAnchor="end"
+                        fontSize="9.5"
+                        fill="#6B7280"
+                        fontWeight="500"
+                      >
+                        {t}%
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Area polygon */}
+                {attPoints.length > 0 && (
+                  <polygon
+                    points={`${attPoints.map((p: any) => `${p.x},${p.y}`).join(' ')} ${plotRight - innerPad},${plotBottom} ${plotLeft + innerPad},${plotBottom}`}
+                    fill="url(#hrTrendGradient)"
+                  />
+                )}
+
+                {/* Trend Polyline */}
+                {attPoints.length > 0 && (
+                  <polyline
+                    points={attPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+
+                {/* Data Points, exact values & X-axis month ticks */}
+                {attPoints.map((p: any, i: number) => (
+                  <g key={i}>
+                    {/* Exact Value above point */}
+                    <text
+                      x={p.x}
+                      y={p.y - 8}
+                      textAnchor="middle"
+                      fontSize="10"
+                      fontWeight="700"
+                      fill="#047857"
+                    >
+                      {p.rate}%
+                    </text>
+
+                    {/* Circle Point */}
+                    <circle cx={p.x} cy={p.y} r="3.5" fill="#064E3B" stroke="#34D399" strokeWidth="2" />
+
+                    {/* X-axis Tick mark */}
+                    <line x1={p.x} y1={plotBottom} x2={p.x} y2={plotBottom + 4} stroke="#9CA3AF" strokeWidth="1" />
+
+                    {/* X-axis Month Label */}
+                    <text
+                      x={p.x}
+                      y={plotBottom + 16}
+                      textAnchor="middle"
+                      fontSize="10.5"
+                      fontWeight="600"
+                      fill="#374151"
+                    >
+                      {p.month}
+                    </text>
+
+                    {/* Leave days badge below month */}
+                    <text
+                      x={p.x}
+                      y={plotBottom + 28}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fontWeight="500"
+                      fill="#6B7280"
+                    >
+                      {p.leaveDays}d off
+                    </text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+          )
         ) : monthlyTrend.length === 0 ? (
           <div className="py-14 text-center text-xs text-ink-400">No trend history available.</div>
         ) : (
@@ -346,7 +582,8 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
 
               {/* Y-axis gridlines and scale labels */}
               {yTicks.map((t, idx) => {
-                const y = plotBottom - (t / yMax) * plotHeight;
+                const y = plotBottom - ((t - yMin) / ySpan) * plotHeight;
+                const isBaseline = idx === yTicks.length - 1;
                 return (
                   <g key={idx}>
                     <line
@@ -355,8 +592,8 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
                       x2={plotRight}
                       y2={y}
                       stroke="#E5E7EB"
-                      strokeWidth={t === 0 ? 1.5 : 1}
-                      strokeDasharray={t === 0 ? undefined : '2 3'}
+                      strokeWidth={isBaseline ? 1.5 : 1}
+                      strokeDasharray={isBaseline ? undefined : '2 3'}
                     />
                     <text
                       x={plotLeft - 6}
@@ -431,23 +668,51 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
         )}
       </div>
 
-      {/* Row 3: Other Two Visual Graphs Below (50/50 2-column layout) */}
+      {/* Row 3: Two Visual Graphs Below (50/50 2-column layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Card 1: Salary Cost by Department (Enhanced Modern Bar Chart) */}
+        {/* Card 1: Headcount by Department for HR Manager / Salary Cost by Department for Payroll */}
         <div className="p-5 bg-surface border border-border rounded-lg shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
               <div>
-                <h3 className="text-base font-bold text-ink-900 tracking-tight">Salary Cost by Department</h3>
-                <p className="text-xs text-ink-500">Source: Payslips + Employee Department</p>
+                <h3 className="text-base font-bold text-ink-900 tracking-tight">
+                  {isHRManager ? 'Headcount by Department' : 'Salary Cost by Department'}
+                </h3>
+                <p className="text-xs text-ink-500">
+                  {isHRManager ? 'Source: Active employee distribution' : 'Source: Payslips + Employee Department'}
+                </p>
               </div>
               <BarChart3 size={18} className="text-ink-400" />
             </div>
 
             {isHRManager ? (
-              <div className="py-14 text-center text-xs text-ink-400 italic">
-                Salary costs hidden for HR Manager role.
-              </div>
+              headcountByDept.length === 0 ? (
+                <div className="py-14 text-center text-xs text-ink-400">No departmental headcount data.</div>
+              ) : (
+                <div className="space-y-3 pt-3">
+                  {headcountByDept.map((d: any) => (
+                    <div key={d.id || d.department} className="space-y-1.5 p-2 rounded-md hover:bg-paper/50 transition-colors">
+                      <div className="flex justify-between items-center text-xs md:text-sm">
+                        <span className="font-semibold text-ink-900">{d.department}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium tnum bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {d.percentage}%
+                          </span>
+                          <span className="font-bold text-ink-900 tnum">
+                            {d.count} {d.count === 1 ? 'member' : 'members'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2.5 bg-paper rounded-full overflow-hidden border border-border-soft/60">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-chartreuse-500 transition-all duration-500"
+                          style={{ width: `${Math.max(6, d.percentage)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             ) : salaryByDept.length === 0 ? (
               <div className="py-14 text-center text-xs text-ink-400">No departmental salary data.</div>
             ) : (
@@ -491,13 +756,17 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
           </div>
         </div>
 
-        {/* Card 2: Payslip Status & Payroll Alerts (Harmonious Colors & Clear Alert States) */}
+        {/* Card 2: Status Split & Alerts */}
         <div className="p-5 bg-surface border border-border rounded-lg shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
               <div>
-                <h3 className="text-base font-bold text-ink-900 tracking-tight">Payslip Status & Payroll Alerts</h3>
-                <p className="text-xs text-ink-500">Source: Payrun + Payslip validation</p>
+                <h3 className="text-base font-bold text-ink-900 tracking-tight">
+                  {isHRManager ? 'Attendance Status & HR Action Alerts' : 'Payslip Status & Payroll Alerts'}
+                </h3>
+                <p className="text-xs text-ink-500">
+                  {isHRManager ? 'Source: Attendance system & HR pending queues' : 'Source: Payrun + Payslip validation'}
+                </p>
               </div>
               {alerts.some((a: any) => (a.count || 0) > 0) ? (
                 <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
@@ -514,45 +783,81 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
 
             {/* Status Split Horizontal Bar */}
             <div className="space-y-1.5 mt-3 mb-4">
-              <div className="text-xs font-semibold text-ink-700">Status split</div>
-              <div className="h-3.5 w-full bg-paper rounded-full flex overflow-hidden border border-border-soft">
-                {pctPaid > 0 && (
-                  <div style={{ width: `${pctPaid}%` }} className="bg-emerald-500 h-full" title={`Paid: ${statusSplit.paid}`} />
-                )}
-                {pctValidated > 0 && (
-                  <div style={{ width: `${pctValidated}%` }} className="bg-sky-500 h-full" title={`Validated: ${statusSplit.validated}`} />
-                )}
-                {pctComputed > 0 && (
-                  <div style={{ width: `${pctComputed}%` }} className="bg-amber-400 h-full" title={`Computed: ${statusSplit.computed}`} />
-                )}
-                {pctDraft > 0 && (
-                  <div style={{ width: `${pctDraft}%` }} className="bg-slate-400 h-full" title={`Draft: ${statusSplit.draft}`} />
-                )}
+              <div className="text-xs font-semibold text-ink-700">
+                {isHRManager ? 'Attendance status split' : 'Payslip status split'}
               </div>
-              <div className="flex items-center gap-3.5 text-xs text-ink-600 font-medium pt-0.5">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Paid ({statusSplit.paid})</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Validated ({statusSplit.validated})</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Computed ({statusSplit.computed})</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-400" /> Draft ({statusSplit.draft})</span>
-              </div>
+              {isHRManager ? (
+                <>
+                  <div className="h-3.5 w-full bg-paper rounded-full flex overflow-hidden border border-border-soft">
+                    {attPctPresent > 0 && (
+                      <div style={{ width: `${attPctPresent}%` }} className="bg-emerald-500 h-full" title={`Present: ${attDist.present || 0}`} />
+                    )}
+                    {attPctLate > 0 && (
+                      <div style={{ width: `${attPctLate}%` }} className="bg-amber-400 h-full" title={`Late: ${attDist.late || 0}`} />
+                    )}
+                    {attPctAbsent > 0 && (
+                      <div style={{ width: `${attPctAbsent}%` }} className="bg-rose-500 h-full" title={`Absent: ${attDist.absent || 0}`} />
+                    )}
+                    {attPctOvertime > 0 && (
+                      <div style={{ width: `${attPctOvertime}%` }} className="bg-sky-500 h-full" title={`Overtime: ${attDist.overtime || 0}`} />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-ink-600 font-medium pt-0.5 flex-wrap">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present ({attDist.present || 0})</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Late ({attDist.late || 0})</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Absent ({attDist.absent || 0})</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Overtime ({attDist.overtime || 0})</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-3.5 w-full bg-paper rounded-full flex overflow-hidden border border-border-soft">
+                    {pctPaid > 0 && (
+                      <div style={{ width: `${pctPaid}%` }} className="bg-emerald-500 h-full" title={`Paid: ${statusSplit.paid}`} />
+                    )}
+                    {pctValidated > 0 && (
+                      <div style={{ width: `${pctValidated}%` }} className="bg-sky-500 h-full" title={`Validated: ${statusSplit.validated}`} />
+                    )}
+                    {pctComputed > 0 && (
+                      <div style={{ width: `${pctComputed}%` }} className="bg-amber-400 h-full" title={`Computed: ${statusSplit.computed}`} />
+                    )}
+                    {pctDraft > 0 && (
+                      <div style={{ width: `${pctDraft}%` }} className="bg-slate-400 h-full" title={`Draft: ${statusSplit.draft}`} />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3.5 text-xs text-ink-600 font-medium pt-0.5">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Paid ({statusSplit.paid})</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" /> Validated ({statusSplit.validated})</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Computed ({statusSplit.computed})</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-400" /> Draft ({statusSplit.draft})</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Current Alerts List with contextual colors */}
             <div className="space-y-2 pt-2 border-t border-border-soft">
-              <div className="text-xs font-semibold text-ink-700 mb-1">Current alerts & warnings</div>
+              <div className="text-xs font-semibold text-ink-700 mb-1">
+                {isHRManager ? 'Actionable HR alerts' : 'Current alerts & warnings'}
+              </div>
               {alerts.map((a: any) => {
                 const isTriggered = (a.count || 0) > 0;
                 return isTriggered ? (
                   <div
                     key={a.id}
-                    className="flex items-center justify-between p-2.5 rounded-md bg-amber-50/90 border border-amber-200 text-xs"
+                    onClick={() => a.actionView && onNavigate?.(a.actionView as any)}
+                    className={cn(
+                      "flex items-center justify-between p-2.5 rounded-md bg-amber-50/90 border border-amber-200 text-xs transition-colors",
+                      a.actionView && "cursor-pointer hover:bg-amber-100/90 group"
+                    )}
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                       <span className="text-amber-950 font-semibold">{a.title}</span>
                     </div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 shrink-0">
-                      Action Required
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 shrink-0 flex items-center gap-0.5 group-hover:bg-amber-300">
+                      {a.actionView ? 'Action' : 'Required'}
+                      {a.actionView && <ChevronRight size={10} />}
                     </span>
                   </div>
                 ) : (
@@ -710,8 +1015,12 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-base font-bold text-ink-900 tracking-tight">Department Overview</h4>
-                <p className="text-xs text-ink-500">Staffing distribution & payroll cost</p>
+                <h4 className="text-base font-bold text-ink-900 tracking-tight">
+                  {isHRManager ? 'Department Staffing' : 'Department Overview'}
+                </h4>
+                <p className="text-xs text-ink-500">
+                  {isHRManager ? 'Headcount, active contracts & time off' : 'Staffing distribution & payroll cost'}
+                </p>
               </div>
               <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-ink-700">
                 {deptOverview.reduce((s: number, d: any) => s + (d.headcount || 0), 0)} Total Staff
@@ -737,14 +1046,23 @@ export function PayrollDashboard({ onNavigate, userSession }: PayrollDashboardPr
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="text-xs md:text-sm font-semibold text-ink-900 tnum">
-                        {isHRManager ? (
-                          <span className="text-xs text-ink-400 italic font-normal">Restricted</span>
-                        ) : (
-                          formatIndianLakhs(d.monthlySalary)
-                        )}
-                      </div>
-                      <div className="text-[10px] text-ink-400">Monthly</div>
+                      {isHRManager ? (
+                        <>
+                          <div className="text-xs md:text-sm font-semibold text-ink-900 tnum">
+                            {d.activeContracts ?? 0} {d.activeContracts === 1 ? 'Contract' : 'Contracts'}
+                          </div>
+                          <div className="text-[10px] text-ink-500">
+                            {d.leaveDays ?? 0} {d.leaveDays === 1 ? 'day off' : 'days off'}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-xs md:text-sm font-semibold text-ink-900 tnum">
+                            {formatIndianLakhs(d.monthlySalary)}
+                          </div>
+                          <div className="text-[10px] text-ink-400">Monthly</div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

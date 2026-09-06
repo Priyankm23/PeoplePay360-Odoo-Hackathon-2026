@@ -13,8 +13,11 @@ import {
   Calculator,
   ChevronDown,
   ChevronRight,
-  CircleDollarSign,
   LogOut,
+  CalendarOff,
+  CalendarDays,
+  PieChart,
+  Layers,
   type LucideIcon,
 } from 'lucide-react';
 import type { View, UserSession, UserRole } from '@/types';
@@ -49,13 +52,13 @@ function getNavItems(role?: UserRole): (NavItem | NavGroup)[] {
     return [
       { label: 'My Profile', icon: Users, view: 'employee-detail' },
       { label: 'My Attendance', icon: CalendarCheck, view: 'attendance' },
-      { label: 'My Time Off', icon: Briefcase, view: 'time-off-requests' },
+      { label: 'My Time Off', icon: CalendarOff, view: 'time-off-requests' },
       { label: 'My Payslips', icon: FileText, view: 'payslips' },
     ];
   }
 
   const items: (NavItem | NavGroup)[] = [
-    { label: 'Dashboard', icon: LayoutDashboard, view: 'payroll-dashboard' },
+    { label: role === 'HR Manager' ? 'HR Dashboard' : 'Dashboard', icon: LayoutDashboard, view: 'payroll-dashboard' },
     {
       label: 'Employees',
       icon: Users,
@@ -71,11 +74,11 @@ function getNavItems(role?: UserRole): (NavItem | NavGroup)[] {
     { label: 'Attendance', icon: CalendarCheck, view: 'attendance' },
     {
       label: 'Time Off',
-      icon: Briefcase,
+      icon: CalendarOff,
       items: [
-        { label: 'Requests', icon: Briefcase, view: 'time-off-requests' },
-        { label: 'Allocations', icon: Briefcase, view: 'time-off-allocations' },
-        { label: 'Types', icon: Briefcase, view: 'time-off-types' },
+        { label: 'Requests', icon: CalendarDays, view: 'time-off-requests' },
+        { label: 'Allocations', icon: PieChart, view: 'time-off-allocations' },
+        { label: 'Types', icon: Layers, view: 'time-off-types' },
       ],
     },
   ];
@@ -140,14 +143,22 @@ export function Sidebar({ current, onNavigate, userSession, onLogout }: SidebarP
       style={{ background: 'linear-gradient(180deg, #1A2E24 0%, #152618 100%)' }}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center gap-2.5 px-4 border-b border-sidebar-border shrink-0">
-        <div className="w-8 h-8 rounded-sm-md bg-ink-900 flex items-center justify-center shrink-0">
-          <CircleDollarSign size={18} className="text-chartreuse-300" />
-        </div>
-        {!collapsed && (
-          <div className="leading-none">
-            <div className="text-sm font-bold text-sidebar-textStrong tracking-tight">PeoplePay<span className="text-chartreuse-300">360</span></div>
-            <div className="text-[10px] text-sidebar-textMuted mt-0.5 tracking-wide uppercase font-medium">HR & Payroll</div>
+      <div className="h-20 flex items-center px-3.5 border-b border-sidebar-border shrink-0">
+        {collapsed ? (
+          <div className="w-10 h-10 overflow-hidden flex items-center justify-center shrink-0 mx-auto">
+            <img
+              src="/logo-without-bg.png"
+              alt="PeoplePay360"
+              className="h-10 w-auto max-w-none object-contain"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center">
+            <img
+              src="/logo-without-bg.png"
+              alt="PeoplePay360"
+              className="h-14 w-auto max-w-full object-contain"
+            />
           </div>
         )}
       </div>

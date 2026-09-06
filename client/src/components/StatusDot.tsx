@@ -14,6 +14,7 @@ export type StatusDotType =
   | 'submitted'
   | 'approved'
   | 'refused'
+  | 'pending'
   | 'expired'
   | 'cancelled'
   | 'computed'
@@ -33,6 +34,7 @@ const dotConfig: Record<StatusDotType, { color: string; label: string }> = {
   running: { color: 'bg-status-success', label: 'Running' },
   draft: { color: 'bg-ink-300', label: 'Draft' },
   submitted: { color: 'bg-status-info', label: 'Submitted' },
+  pending: { color: 'bg-status-warning', label: 'Pending' },
   approved: { color: 'bg-status-success', label: 'Approved' },
   refused: { color: 'bg-status-danger', label: 'Refused' },
   expired: { color: 'bg-ink-300', label: 'Expired' },

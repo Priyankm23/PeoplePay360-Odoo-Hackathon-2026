@@ -53,39 +53,91 @@ export interface AttendanceRecord {
   missingCheckout: boolean;
 }
 
-export type TimeOffStatus = 'draft' | 'submitted' | 'approved' | 'refused';
+export type TimeOffStatus = 'draft' | 'submitted' | 'approved' | 'refused' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REFUSED';
 
 export interface TimeOffRequest {
   id: string;
   employeeId: string;
-  type: string;
+  timeOffTypeId?: string;
+  type?: string;
   startDate: string;
   endDate: string;
   duration: number;
   status: TimeOffStatus;
-  reason: string;
-  allocationName: string;
-  allocationTotal: number;
-  allocationUsed: number;
+  reason?: string | null;
+  decisionNote?: string | null;
+  allocationId?: string | null;
+  allocationName?: string;
+  allocationTotal?: number;
+  allocationUsed?: number;
+  allocation?: TimeOffAllocation | null;
+  employee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    department?: { id: string; name: string };
+    jobPosition?: { id: string; title: string };
+  };
+  timeOffType?: {
+    id: string;
+    name: string;
+    unit: string;
+    requiresAllocation: boolean;
+    requiresApproval: boolean;
+    affectsPayroll: boolean;
+  };
+  approver?: {
+    id: string;
+    email: string;
+    role: string;
+  } | null;
+  createdAt?: string;
 }
 
 export interface TimeOffType {
   id: string;
   name: string;
-  code: string;
-  color: string;
-  allocationType: string;
-  paid: boolean;
+  code?: string;
+  color?: string;
+  unit?: 'DAYS' | 'HOURS';
+  requiresAllocation?: boolean;
+  requiresApproval?: boolean;
+  affectsPayroll?: boolean;
+  isArchived?: boolean;
+  allocationCount?: number;
+  requestCount?: number;
+  allocationType?: string;
+  paid?: boolean;
 }
 
 export interface TimeOffAllocation {
   id: string;
   employeeId: string;
-  type: string;
-  totalDays: number;
-  usedDays: number;
-  remainingDays: number;
-  period: string;
+  timeOffTypeId?: string;
+  type?: string;
+  allocated?: number;
+  taken?: number;
+  remaining?: number;
+  totalDays?: number;
+  usedDays?: number;
+  remainingDays?: number;
+  period?: string;
+  validFrom?: string;
+  validTo?: string | null;
+  status?: 'PENDING' | 'APPROVED' | 'REFUSED';
+  employee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    department?: { id: string; name: string };
+  };
+  timeOffType?: {
+    id: string;
+    name: string;
+    unit?: string;
+  };
 }
 
 export type PayrunStatus = 'draft' | 'computed' | 'validated' | 'paid';
@@ -198,7 +250,7 @@ export type ComputationMethod = 'FIXED' | 'PERCENTAGE';
 export interface SalaryStructure {
   id: string;
   name: string;
-  isActive: boolean;
+  isActive?: boolean;
   active?: boolean;
   rulesCount: number;
   contractCount?: number;
@@ -206,6 +258,8 @@ export interface SalaryStructure {
   rules?: SalaryRule[];
   createdAt?: string;
   updatedAt?: string;
+  type?: string;
+  parent?: string | null;
 }
 
 export interface SalaryRule {
@@ -215,10 +269,10 @@ export interface SalaryRule {
   code: string;
   category: SalaryRuleCategory | string;
   sequence: number;
-  computationMethod: ComputationMethod;
-  fixedAmount: number | null;
-  percentage: number | null;
-  baseRuleId: string | null;
+  computationMethod?: ComputationMethod;
+  fixedAmount?: number | null;
+  percentage?: number | null;
+  baseRuleId?: string | null;
   baseRule?: {
     id: string;
     name: string;
@@ -227,6 +281,10 @@ export interface SalaryRule {
   } | null;
   createdAt?: string;
   updatedAt?: string;
+  structure?: string;
+  condition?: string;
+  formula?: string;
+  active?: boolean;
 }
 
 export interface DepartmentInfo {

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface TableProps {
@@ -37,7 +37,8 @@ export function TH({
     <th
       colSpan={colSpan}
       className={cn(
-        'text-xs font-medium text-ink-500 uppercase tracking-wide px-4 py-2.5',
+        'text-xs font-medium text-ink-500 uppercase tracking-wide px-4 py-2.5 text-left',
+        align === 'left' && 'text-left',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
         className
@@ -80,15 +81,18 @@ export function TD({
   align = 'left',
   className,
   colSpan,
+  onClick,
 }: {
   children?: ReactNode;
   align?: 'left' | 'right' | 'center';
   className?: string;
   colSpan?: number;
+  onClick?: MouseEventHandler<HTMLTableCellElement>;
 }) {
   return (
     <td
       colSpan={colSpan}
+      onClick={onClick}
       className={cn(
         'text-sm text-ink-900 px-4 py-2.5',
         align === 'right' && 'text-right tnum',

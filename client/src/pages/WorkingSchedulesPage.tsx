@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Clock, ArrowLeft, Trash2, Pencil } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/Button';
+import { Table, THead, TH, TBody, TR, TD } from '../components/Table';
 import { api } from '../lib/api';
 import type { UserSession } from '../types';
 
@@ -332,40 +333,40 @@ export function WorkingSchedulesPage({ userSession }: WorkingSchedulesPageProps)
         </div>
       )}
 
-      <div className="border border-border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-paper border-b border-border text-left text-xs text-ink-500">
-              <th className="px-4 py-3">Schedule Name</th>
-              <th className="px-4 py-3">Days / Week</th>
-              <th className="px-4 py-3">Hours / Week</th>
-              <th className="px-4 py-3">Employees</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {schedules.map((schedule) => (
-              <tr
-                key={schedule.id}
-                onClick={() => openSchedule(schedule)}
-                className="border-b border-border-soft hover:bg-paper/60 cursor-pointer"
-              >
-                <td className="px-4 py-3 font-medium">
-                  <span className="inline-flex items-center gap-2">
-                    <Clock size={15} className="text-ink-300" />
-                    {schedule.name}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{schedule.daysPerWeek}</td>
-                <td className="px-4 py-3 tnum">{schedule.weeklyHours.toFixed(1)}h</td>
-                <td className="px-4 py-3">{schedule.employeeCount}</td>
-                <td className="px-4 py-3">
-                  <span className={schedule.isArchived ? 'text-xs text-ink-400' : 'text-xs text-status-success'}>
-                    {schedule.isArchived ? 'Inactive' : 'Active'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+      <Table className="bg-white">
+        <THead>
+          <TH className="text-left">Schedule Name</TH>
+          <TH className="text-left">Days / Week</TH>
+          <TH className="text-left">Hours / Week</TH>
+          <TH className="text-left">Employees</TH>
+          <TH className="text-left">Status</TH>
+          <TH align="right" className="text-right">Actions</TH>
+        </THead>
+        <TBody>
+          {schedules.map((schedule) => (
+            <TR
+              key={schedule.id}
+              onClick={() => openSchedule(schedule)}
+              className="cursor-pointer hover:bg-paper/60"
+            >
+              <TD className="font-medium">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Clock size={16} />
+                  </div>
+                  <span className="text-ink-900 font-semibold">{schedule.name}</span>
+                </div>
+              </TD>
+              <TD className="text-ink-700">{schedule.daysPerWeek}</TD>
+              <TD className="text-ink-700 tnum">{schedule.weeklyHours.toFixed(1)}h</TD>
+              <TD className="tnum font-semibold text-ink-900">{schedule.employeeCount}</TD>
+              <TD>
+                <span className={schedule.isArchived ? 'text-xs text-ink-400 font-medium' : 'text-xs text-status-success font-semibold'}>
+                  {schedule.isArchived ? 'Inactive' : 'Active'}
+                </span>
+              </TD>
+              <TD align="right">
+                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => openSchedule(schedule)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-ink-700 hover:text-ink-900 hover:bg-paper border border-border transition-colors"
@@ -378,25 +379,25 @@ export function WorkingSchedulesPage({ userSession }: WorkingSchedulesPageProps)
                     <button
                       type="button"
                       onClick={() => toggleStatus(schedule)}
-                      className="ml-2 text-xs text-ink-600 hover:text-ink-900"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-ink-600 hover:text-ink-900 hover:bg-paper border border-border transition-colors"
                       title={schedule.isArchived ? 'Reactivate Working Schedule' : 'Make Working Schedule Inactive'}
                     >
-                      {schedule.isArchived ? 'Reactivate' : 'Deactivate'}
+                      <span>{schedule.isArchived ? 'Reactivate' : 'Deactivate'}</span>
                     </button>
                   )}
-                </td>
-              </tr>
-            ))}
-            {!loading && schedules.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center py-8 text-ink-400">
-                  No schedules found.{canManageSchedules ? ' Create one using the button above.' : ''}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </TD>
+            </TR>
+          ))}
+          {!loading && schedules.length === 0 && (
+            <TR>
+              <TD colSpan={6} className="text-center py-8 text-ink-400">
+                No schedules found.{canManageSchedules ? ' Create one using the button above.' : ''}
+              </TD>
+            </TR>
+          )}
+        </TBody>
+      </Table>
     </div>
   );
 }

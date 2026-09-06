@@ -298,6 +298,7 @@ async function main() {
       endDate: new Date('2026-09-16'),
       duration: 2.0,
       status: 'SUBMITTED',
+      decisionNote: 'Annual personal time off & family vacation',
     },
   });
 

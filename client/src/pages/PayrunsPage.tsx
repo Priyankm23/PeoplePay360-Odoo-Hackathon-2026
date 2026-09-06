@@ -41,7 +41,7 @@ export function PayrunsPage({ onNavigate, userSession }: PayrunsPageProps) {
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
         search: searchQuery.trim() || undefined,
       });
-      const data = Array.isArray(res) ? res : res?.data || [];
+      const data = Array.isArray(res) ? res : [];
       setPayrunsList(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch payruns');

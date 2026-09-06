@@ -283,6 +283,8 @@ class ApiClient {
       this.request<any>('/working-schedules', { method: 'POST', body: JSON.stringify(data) }),
     update: async (id: string, data: any) => this.request<any>(`/working-schedules/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: async (id: string) => this.request<any>(`/working-schedules/${id}`, { method: 'DELETE' }),
+    setArchived: async (id: string, isArchived: boolean) =>
+      this.request<any>(`/working-schedules/${id}`, { method: 'PATCH', body: JSON.stringify({ isArchived }) }),
   };
 
   // ==========================================
@@ -605,6 +607,124 @@ class ApiClient {
       if (params?.employeeType) q.append('employeeType', params.employeeType);
       const query = q.toString();
       return this.request<any>(`/dashboard${query ? `?${query}` : ''}`);
+    },
+  };
+
+  // ==========================================
+  // TIME OFF & ALLOCATION MODULE
+  // ==========================================
+  timeOff = {
+    // Types
+    getTypes: async () => {
+      return this.request<any[]>('/time-off-types');
+    },
+    getTypeById: async (id: string) => {
+      return this.request<any>(`/time-off-types/${id}`);
+    },
+    createType: async (data: {
+      name: string;
+      unit?: 'DAYS' | 'HOURS';
+      requiresAllocation?: boolean;
+      requiresApproval?: boolean;
+      affectsPayroll?: boolean;
+    }) => {
+      return this.request<any>('/time-off-types', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    updateType: async (id: string, data: any) => {
+      return this.request<any>(`/time-off-types/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    archiveType: async (id: string) => {
+      return this.request<any>(`/time-off-types/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    // Allocations
+    getAllocations: async (params?: { employeeId?: string; timeOffTypeId?: string; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.employeeId) q.append('employeeId', params.employeeId);
+      if (params?.timeOffTypeId) q.append('timeOffTypeId', params.timeOffTypeId);
+      if (params?.status) q.append('status', params.status);
+      const query = q.toString();
+      return this.request<any[]>(`/time-off-allocations${query ? `?${query}` : ''}`);
+    },
+    getAllocationById: async (id: string) => {
+      return this.request<any>(`/time-off-allocations/${id}`);
+    },
+    createAllocation: async (data: {
+      employeeId: string;
+      timeOffTypeId: string;
+      allocated: number;
+      validFrom: string;
+      validTo?: string | null;
+    }) => {
+      return this.request<any>('/time-off-allocations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    approveAllocation: async (id: string) => {
+      return this.request<any>(`/time-off-allocations/${id}/approve`, {
+        method: 'PATCH',
+      });
+    },
+    refuseAllocation: async (id: string) => {
+      return this.request<any>(`/time-off-allocations/${id}/refuse`, {
+        method: 'PATCH',
+      });
+    },
+    deleteAllocation: async (id: string) => {
+      return this.request<any>(`/time-off-allocations/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    // Requests
+    getRequests: async (params?: { employeeId?: string; timeOffTypeId?: string; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.employeeId) q.append('employeeId', params.employeeId);
+      if (params?.timeOffTypeId) q.append('timeOffTypeId', params.timeOffTypeId);
+      if (params?.status) q.append('status', params.status);
+      const query = q.toString();
+      return this.request<any[]>(`/time-off-requests${query ? `?${query}` : ''}`);
+    },
+    getRequestById: async (id: string) => {
+      return this.request<any>(`/time-off-requests/${id}`);
+    },
+    createRequest: async (data: {
+      employeeId?: string;
+      timeOffTypeId: string;
+      startDate: string;
+      endDate: string;
+      duration: number;
+      reason?: string | null;
+    }) => {
+      return this.request<any>('/time-off-requests', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    approveRequest: async (id: string) => {
+      return this.request<any>(`/time-off-requests/${id}/approve`, {
+        method: 'PATCH',
+      });
+    },
+    refuseRequest: async (id: string, data?: { decisionNote?: string | null }) => {
+      return this.request<any>(`/time-off-requests/${id}/refuse`, {
+        method: 'PATCH',
+        body: JSON.stringify(data || {}),
+      });
+    },
+    deleteRequest: async (id: string) => {
+      return this.request<any>(`/time-off-requests/${id}`, {
+        method: 'DELETE',
+      });
     },
   };
 }

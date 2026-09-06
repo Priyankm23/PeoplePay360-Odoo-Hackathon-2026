@@ -14,7 +14,6 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { Avatar } from '@/components/Avatar';
 import { Table, THead, TH, TBody, TR, TD } from '@/components/Table';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/Button';
@@ -88,7 +87,7 @@ export function AttendancePage({
     setError(null);
     try {
       const data = await api.attendance.getAll({
-        employeeId: selectedEmpFilter || (isEmployee ? userSession?.employeeId : undefined),
+        employeeId: selectedEmpFilter || (isEmployee ? userSession?.employeeId ?? undefined : undefined),
         today: todayFilter ? true : undefined,
         status: statusFilter !== 'ALL' ? statusFilter : undefined,
       });
@@ -556,8 +555,8 @@ export function AttendancePage({
           <TH className="w-1/6">Date</TH>
           <TH className="w-1/6">Check In</TH>
           <TH className="w-1/6">Check Out</TH>
-          <TH className="w-1/8">Worked Hours</TH>
-          <TH className="w-1/8">Status</TH>
+          <TH className="w-[12%]">Worked Hours</TH>
+          <TH className="w-[13%]">Status</TH>
           {canManageAttendance && <TH align="right" className="w-20">Actions</TH>}
         </THead>
         <TBody>
@@ -586,19 +585,11 @@ export function AttendancePage({
                   className="cursor-pointer hover:bg-paper/60 transition-colors"
                 >
                   <TD className="font-medium">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar
-                        firstName={emp?.firstName || 'E'}
-                        lastName={emp?.lastName || ''}
-                        color="bg-emerald-600"
-                        size="sm"
-                      />
-                      <div>
-                        <div className="text-ink-900 font-semibold text-xs">
-                          {emp?.firstName} {emp?.lastName}
-                        </div>
-                        <div className="text-[11px] text-ink-400">{emp?.email}</div>
+                    <div>
+                      <div className="text-ink-900 font-semibold text-xs">
+                        {emp?.firstName} {emp?.lastName}
                       </div>
+                      <div className="text-[11px] text-ink-400">{emp?.email}</div>
                     </div>
                   </TD>
                   <TD className="text-xs text-ink-700 tnum">{formatDate(record.date)}</TD>

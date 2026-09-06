@@ -21,6 +21,7 @@ import { Modal } from '@/components/Modal';
 import { api } from '@/lib/api';
 import { formatCurrency } from '@/data';
 import type { View, UserSession } from '@/types';
+import { BentoGrid, BentoCard } from '@/components/ui/bento-grid';
 import { cn, formatRole } from '@/lib/utils';
 
 interface EmployeeDetailPageProps {
@@ -66,6 +67,7 @@ interface EmployeeDetailRecord {
   };
   activeContract?: {
     id: string;
+    reference?: string;
     wage: number;
     startDate: string;
     endDate: string | null;
@@ -100,6 +102,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
   const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [overviewMode, setOverviewMode] = useState<'bento' | 'compact'>('bento');
 
   // Archive Modal State
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
@@ -249,33 +252,71 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
           )}
         </div>
 
-        {canManage && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={openEditModal}>
-              <Pencil size={13} />
-              Edit Profile
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsArchiveModalOpen(true);
-                setArchiveError(null);
-              }}
-              className="text-status-danger hover:border-status-danger"
+        <div className="flex items-center gap-3">
+          {/* Bento / Compact View Toggle */}
+          <div className="flex items-center gap-1 bg-paper p-1 rounded-lg border border-border">
+            <button
+              type="button"
+              onClick={() => setOverviewMode('bento')}
+              className={cn(
+                'px-2.5 py-1 text-xs rounded font-medium transition-colors',
+                overviewMode === 'bento'
+                  ? 'bg-surface text-ink-900 shadow-2xs font-semibold'
+                  : 'text-ink-500 hover:text-ink-900'
+              )}
             >
-              <Trash2 size={13} />
-              Archive
-            </Button>
+              Bento View
+            </button>
+            <button
+              type="button"
+              onClick={() => setOverviewMode('compact')}
+              className={cn(
+                'px-2.5 py-1 text-xs rounded font-medium transition-colors',
+                overviewMode === 'compact'
+                  ? 'bg-surface text-ink-900 shadow-2xs font-semibold'
+                  : 'text-ink-500 hover:text-ink-900'
+              )}
+            >
+              Compact Metrics
+            </button>
           </div>
-        )}
+
+          {canManage && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={openEditModal}>
+                <Pencil size={13} />
+                Edit Profile
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsArchiveModalOpen(true);
+                  setArchiveError(null);
+                }}
+                className="text-status-danger hover:border-status-danger"
+              >
+                <Trash2 size={13} />
+                Archive
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left column - profile card */}
-        <div className="w-full lg:w-[300px] shrink-0">
-          <div className="border border-border bg-surface rounded-lg p-5 shadow-2xs">
-            <div className="flex flex-col items-center text-center">
+        {/* Left column - Bento-styled Profile Card */}
+        <div className="w-full lg:w-[320px] shrink-0">
+          <div className="group relative overflow-hidden rounded-xl border border-border/80 bg-white p-6 [box-shadow:0_0_0_1px_rgba(0,0,0,.03),0_2px_4px_rgba(0,0,0,.05),0_12px_24px_rgba(0,0,0,.05)] hover:border-emerald-500/40 transition-all space-y-5">
+            {/* Top-Right Ambient Background Graphic (Bento Signature) */}
+            <img
+              src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=500&q=80"
+              alt="Office ambient"
+              className="absolute -right-8 -top-8 w-44 h-36 object-cover rounded-xl opacity-15 filter grayscale group-hover:grayscale-0 group-hover:opacity-30 transition-all duration-300 pointer-events-none"
+            />
+
+            {/* Profile Avatar & Header */}
+            <div className="relative z-10 flex flex-col items-center text-center pt-1">
               <Avatar
                 firstName={employee.firstName}
                 lastName={employee.lastName}
@@ -283,108 +324,123 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 imageUrl={employee.profileImageUrl}
                 onClick={employee.profileImageUrl ? () => window.open(employee.profileImageUrl || '', '_blank', 'noopener,noreferrer') : undefined}
                 size="lg"
+                className="ring-4 ring-emerald-100/80 shadow-sm transform-gpu transition-all duration-300 group-hover:scale-105"
               />
-              <h2 className="text-base font-bold mt-3 text-ink-900">
+              <h2 className="text-xl font-bold mt-3.5 text-ink-900 tracking-tight">
                 {employee.firstName} {employee.lastName}
               </h2>
-              <p className="text-sm text-ink-500 mt-0.5">
+              <p className="text-xs font-semibold text-ink-500 mt-0.5">
                 {employee.jobPosition?.title || 'Team Member'}
               </p>
-              <div className="mt-2.5">
-                <StatusDot type={employee.status === 'ACTIVE' ? 'active' : 'inactive'} />
+              {/* Prominent High-Visibility Status Badge */}
+              <div className="mt-3">
+                {employee.status === 'ACTIVE' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Active Employee
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-gray-400" />
+                    Inactive
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="mt-5 pt-5 border-t border-border-soft space-y-3">
-              <div className="flex items-center gap-2.5 text-sm">
-                <Briefcase size={15} className="text-ink-300 shrink-0" />
+            {/* Profile Info Attributes */}
+            <div className="relative z-10 pt-4 border-t border-border-soft space-y-2.5">
+              <div className="flex items-center gap-2.5 text-xs">
+                <Briefcase size={14} className="text-ink-400 shrink-0" />
                 <span className="text-ink-500">Department</span>
-                <span className="ml-auto text-ink-900 font-medium">
+                <span className="ml-auto text-ink-900 font-semibold">
                   {employee.department?.name || '—'}
                 </span>
               </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <Mail size={15} className="text-ink-300 shrink-0" />
+              <div className="flex items-center gap-2.5 text-xs">
+                <Mail size={14} className="text-ink-400 shrink-0" />
                 <span className="text-ink-500">Email</span>
-                <span className="ml-auto text-ink-900 text-xs truncate max-w-[140px]" title={employee.email}>
+                <span className="ml-auto text-ink-900 text-xs truncate max-w-[150px] font-medium" title={employee.email}>
                   {employee.email}
                 </span>
               </div>
               {employee.phone && (
-                <div className="flex items-center gap-2.5 text-sm">
-                  <Phone size={15} className="text-ink-300 shrink-0" />
+                <div className="flex items-center gap-2.5 text-xs">
+                  <Phone size={14} className="text-ink-400 shrink-0" />
                   <span className="text-ink-500">Phone</span>
-                  <span className="ml-auto text-ink-900 tnum">{employee.phone}</span>
+                  <span className="ml-auto text-ink-900 font-medium tnum">{employee.phone}</span>
                 </div>
               )}
               {employee.bankAccount && (
-                <div className="flex items-center gap-2.5 text-sm">
-                  <CreditCard size={15} className="text-ink-300 shrink-0" />
+                <div className="flex items-center gap-2.5 text-xs">
+                  <CreditCard size={14} className="text-ink-400 shrink-0" />
                   <span className="text-ink-500">Bank</span>
-                  <span className="ml-auto text-ink-900 font-mono text-xs truncate max-w-[130px]" title={employee.bankAccount}>
+                  <span className="ml-auto text-ink-900 font-mono text-[11px] truncate max-w-[130px]" title={employee.bankAccount}>
                     {employee.bankAccount}
                   </span>
                 </div>
               )}
-              <div className="flex items-center gap-2.5 text-sm">
-                <Calendar size={15} className="text-ink-300 shrink-0" />
+              <div className="flex items-center gap-2.5 text-xs">
+                <Calendar size={14} className="text-ink-400 shrink-0" />
                 <span className="text-ink-500">Joined</span>
-                <span className="ml-auto text-ink-900 tnum">
+                <span className="ml-auto text-ink-900 font-medium tnum">
                   {new Date(employee.createdAt).toLocaleDateString()}
                 </span>
               </div>
             </div>
 
             {/* System Access Role Indicator */}
-            <div className="mt-4 pt-4 border-t border-border-soft">
-              <div className="text-xs text-ink-500 mb-1.5 flex items-center gap-1">
+            <div className="relative z-10 pt-3.5 border-t border-border-soft">
+              <div className="text-[11px] text-ink-500 mb-1.5 flex items-center gap-1">
                 <ShieldCheck size={13} className="text-emerald-600" />
-                <span>System Access</span>
+                <span className="font-semibold uppercase tracking-wider text-[10px]">System Access</span>
               </div>
               {employee.user ? (
-                <div className="px-2.5 py-1.5 rounded bg-emerald-50 text-emerald-900 text-xs font-semibold flex items-center justify-between">
+                <div className="px-3 py-2 rounded-lg bg-emerald-50/60 border border-emerald-200/80 text-emerald-900 text-xs font-semibold flex items-center justify-between">
                   <span>Role: {formatRole(employee.user.role)}</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
               ) : (
-                <div className="px-2.5 py-1.5 rounded bg-paper text-ink-400 text-xs">
+                <div className="px-3 py-2 rounded-lg bg-paper text-ink-400 text-xs">
                   No login account
                 </div>
               )}
             </div>
 
+            {/* Reports To */}
             {employee.manager && (
-              <div className="mt-4 pt-4 border-t border-border-soft">
-                <div className="text-xs text-ink-500 mb-2">Reports To</div>
-                <div className="flex items-center gap-2.5">
+              <div className="relative z-10 pt-3.5 border-t border-border-soft">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-ink-400 mb-2">Reports To</div>
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-paper/70 border border-border-soft hover:border-emerald-300 transition-colors">
                   <Avatar
                     firstName={employee.manager.firstName}
                     lastName={employee.manager.lastName}
-                    color="bg-ink-700"
+                    color="#059669"
                     imageUrl={employee.manager.profileImageUrl}
                     size="sm"
                   />
-                  <div>
-                    <div className="text-sm font-medium text-ink-900">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-ink-900 truncate">
                       {employee.manager.firstName} {employee.manager.lastName}
                     </div>
                     {employee.manager.email && (
-                      <div className="text-xs text-ink-400">{employee.manager.email}</div>
+                      <div className="text-[11px] text-ink-400 truncate">{employee.manager.email}</div>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Working Schedule */}
             {employee.workingSchedule && (
-              <div className="mt-4 pt-4 border-t border-border-soft">
-                <div className="text-xs text-ink-500 mb-1 flex items-center justify-between">
-                  <span>Working Schedule</span>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-medium">
+              <div className="relative z-10 pt-3.5 border-t border-border-soft">
+                <div className="text-xs text-ink-500 mb-1.5 flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-ink-400">Working Schedule</span>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
                     {employee.workingSchedule.type === 'FULL_TIME' ? 'Full-Time' : 'Part-Time'}
                   </span>
                 </div>
-                <div className="text-xs font-semibold text-ink-900">
+                <div className="text-xs font-bold text-ink-900">
                   {employee.workingSchedule.name}
                 </div>
                 {employee.workingSchedule.lines && (
@@ -394,82 +450,144 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 )}
               </div>
             )}
+            <div className="pointer-events-none absolute inset-0 transform-gpu transition-all duration-300 group-hover:bg-black/[.02]" />
           </div>
         </div>
 
         {/* Main column - Smart-Button Counts & Active Contract */}
         <div className="flex-1 min-w-0 space-y-5">
-          {/* Smart-Button Metric Badges (Interactive Navigation) */}
+          {/* Smart-Button Bento Grid / Operational Metrics */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold text-ink-500 uppercase tracking-wider">
-                Smart-Button Operational Metrics
-              </h3>
-              <span className="text-[11px] text-ink-400">Click any card to open related records</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                {
-                  label: 'Attendance',
-                  count: employee.counts?.attendance ?? 0,
-                  color: 'text-emerald-700',
-                  available: true,
-                  targetView: 'attendance' as const,
-                },
-                {
-                  label: 'Leave Requests',
-                  count: employee.counts?.timeOffRequests ?? 0,
-                  color: 'text-emerald-700',
-                  available: true,
-                  targetView: 'time-off-requests' as const,
-                },
-                {
-                  label: 'Leave Allocations',
-                  count: employee.counts?.timeOffAllocations ?? 0,
-                  color: 'text-emerald-700',
-                  available: true,
-                  targetView: 'time-off-allocations' as const,
-                },
-                {
-                  label: 'Contracts',
-                  count: employee.counts?.contracts ?? 0,
-                  color: 'text-emerald-700',
-                  available: true,
-                  targetView: 'contracts' as const,
-                },
-              ].map((tile) => (
-                <button
-                  key={tile.label}
-                  type="button"
-                  onClick={() => tile.available && onNavigate(tile.targetView, employee.id)}
-                  disabled={!tile.available}
-                  className={cn(
-                    'p-4 bg-surface rounded-lg border border-border shadow-2xs text-left transition-all group',
-                    tile.available
-                      ? 'hover:border-ink-400 hover:shadow-xs cursor-pointer active:scale-[0.99]'
-                      : 'cursor-default opacity-80'
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-ink-500 font-medium">{tile.label}</span>
-                    {tile.available && (
-                      <ExternalLink size={12} className="text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            {overviewMode === 'bento' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <BentoCard
+                  name="Employment Contract"
+                  className="h-[14rem]"
+                  Icon={FileText}
+                  description={
+                    employee.activeContract
+                      ? `Active reference: ${employee.activeContract.reference || 'Standard'} • Monthly Wage: ${formatCurrency(employee.activeContract.wage)} • Package: ${employee.activeContract.salaryStructure?.name || 'Standard Package'}.`
+                      : `No active running contract on file. Total contracts: ${employee.counts?.contracts ?? 0}.`
+                  }
+                  background={
+                    <img
+                      src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80"
+                      alt="Contracts"
+                      className="absolute -right-8 -top-8 w-60 h-44 object-cover rounded-xl opacity-20 filter grayscale group-hover:grayscale-0 group-hover:opacity-35 transition-all duration-300"
+                    />
+                  }
+                />
+                <BentoCard
+                  name="Attendance Logs"
+                  className="h-[14rem]"
+                  Icon={Clock}
+                  description={`${employee.counts?.attendance ?? 0} total attendance punch logs. Review daily check-ins, check-outs, missing punches, and overtime hours.`}
+                  cta="View Attendance"
+                  onClick={() => onNavigate('attendance', employee.id)}
+                  background={
+                    <img
+                      src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=600&q=80"
+                      alt="Attendance punch history"
+                      className="absolute -right-8 -top-8 w-60 h-44 object-cover rounded-xl opacity-20 filter grayscale group-hover:grayscale-0 group-hover:opacity-35 transition-all duration-300"
+                    />
+                  }
+                />
+                <BentoCard
+                  name="Time Off Requests"
+                  className="h-[14rem]"
+                  Icon={Calendar}
+                  description={`${employee.counts?.timeOffRequests ?? 0} leave request(s) submitted. Track approved, pending, and rejected leave history.`}
+                  cta="Review Leaves"
+                  onClick={() => onNavigate('time-off-requests', employee.id)}
+                  background={
+                    <img
+                      src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=600&q=80"
+                      alt="Time off calendar"
+                      className="absolute -right-8 -top-8 w-60 h-44 object-cover rounded-xl opacity-20 filter grayscale group-hover:grayscale-0 group-hover:opacity-35 transition-all duration-300"
+                    />
+                  }
+                />
+                <BentoCard
+                  name="Leave Allocations"
+                  className="h-[14rem]"
+                  Icon={CreditCard}
+                  description={`${employee.counts?.timeOffAllocations ?? 0} active leave pool allocation(s). Manage annual vacation and paid sick allowances.`}
+                  cta="View Allocations"
+                  onClick={() => onNavigate('time-off-allocations', employee.id)}
+                  background={
+                    <img
+                      src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=600&q=80"
+                      alt="Leave balances"
+                      className="absolute -right-8 -top-8 w-60 h-44 object-cover rounded-xl opacity-20 filter grayscale group-hover:grayscale-0 group-hover:opacity-35 transition-all duration-300"
+                    />
+                  }
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  {
+                    label: 'Attendance',
+                    count: employee.counts?.attendance ?? 0,
+                    color: 'text-emerald-700',
+                    available: true,
+                    targetView: 'attendance' as const,
+                  },
+                  {
+                    label: 'Leave Requests',
+                    count: employee.counts?.timeOffRequests ?? 0,
+                    color: 'text-emerald-700',
+                    available: true,
+                    targetView: 'time-off-requests' as const,
+                  },
+                  {
+                    label: 'Leave Allocations',
+                    count: employee.counts?.timeOffAllocations ?? 0,
+                    color: 'text-emerald-700',
+                    available: true,
+                    targetView: 'time-off-allocations' as const,
+                  },
+                  {
+                    label: 'Contracts',
+                    count: employee.counts?.contracts ?? 0,
+                    color: 'text-emerald-700',
+                    available: true,
+                    targetView: 'contracts' as const,
+                  },
+                ].map((tile) => (
+                  <button
+                    key={tile.label}
+                    type="button"
+                    onClick={() => tile.available && onNavigate(tile.targetView, employee.id)}
+                    disabled={!tile.available}
+                    className={cn(
+                      'p-4 bg-white rounded-xl border border-border shadow-2xs text-left transition-all group',
+                      tile.available
+                        ? 'hover:border-emerald-400 hover:shadow-xs cursor-pointer active:scale-[0.99]'
+                        : 'cursor-default opacity-80'
                     )}
-                  </div>
-                  <div className={cn('text-2xl font-extrabold tnum', tile.color)}>
-                    {tile.count}
-                  </div>
-                  <span className="text-[10px] text-ink-400 mt-1 block">
-                    {tile.available ? 'View records →' : 'Dedicated module'}
-                  </span>
-                </button>
-              ))}
-            </div>
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-ink-500 font-medium">{tile.label}</span>
+                      {tile.available && (
+                        <ExternalLink size={12} className="text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </div>
+                    <div className={cn('text-2xl font-extrabold tnum', tile.color)}>
+                      {tile.count}
+                    </div>
+                    <span className="text-[10px] text-ink-400 mt-1 block">
+                      {tile.available ? 'View records →' : 'Dedicated module'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Active Contract Snapshot */}
-          <div className="border border-border bg-surface rounded-lg p-5 shadow-2xs">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          {/* Active Contract Snapshot (White Bento Card) */}
+          <div className="border border-border bg-white rounded-xl p-5 shadow-2xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
                   <FileText size={16} className="text-emerald-600" />
@@ -497,22 +615,22 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
             {employee.activeContract ? (
               <div
                 onClick={() => canManage && onNavigate('contracts', employee.id)}
-                className={`grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 ${canManage ? 'cursor-pointer group' : ''}`}
+                className={`grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 ${canManage ? 'cursor-pointer group' : ''}`}
                 title={canManage ? 'Click to manage contracts for this employee' : undefined}
               >
-                <div className="p-3 bg-paper rounded border border-border group-hover:border-emerald-300 transition-colors">
+                <div className="p-3.5 bg-paper/60 rounded-lg border border-border group-hover:border-emerald-300 transition-colors">
                   <span className="text-xs text-ink-400 block mb-1">Monthly Wage</span>
                   <span className="text-lg font-bold text-ink-900">
                     {formatCurrency(employee.activeContract.wage)}
                   </span>
                 </div>
-                <div className="p-3 bg-paper rounded border border-border group-hover:border-emerald-300 transition-colors">
+                <div className="p-3.5 bg-paper/60 rounded-lg border border-border group-hover:border-emerald-300 transition-colors">
                   <span className="text-xs text-ink-400 block mb-1">Salary Structure</span>
                   <span className="text-sm font-semibold text-ink-900">
                     {employee.activeContract.salaryStructure?.name || 'Standard Package'}
                   </span>
                 </div>
-                <div className="p-3 bg-paper rounded border border-border group-hover:border-emerald-300 transition-colors">
+                <div className="p-3.5 bg-paper/60 rounded-lg border border-border group-hover:border-emerald-300 transition-colors">
                   <span className="text-xs text-ink-400 block mb-1">Contract Validity</span>
                   <span className="text-xs font-semibold text-ink-900">
                     {new Date(employee.activeContract.startDate).toLocaleDateString()} —{' '}
@@ -523,7 +641,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 </div>
               </div>
             ) : (
-              <div className="p-6 bg-paper rounded border border-dashed border-border text-center">
+              <div className="p-6 bg-paper/50 rounded-lg border border-dashed border-border text-center">
                 <p className="text-xs text-ink-400 mb-2">
                   No active running contract found for this employee.
                 </p>
@@ -541,9 +659,9 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
             )}
           </div>
 
-          {/* Weekly Working Schedule Breakdown */}
-          <div className="border border-border bg-surface rounded-lg p-5 shadow-2xs">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          {/* Weekly Working Schedule Breakdown (White Bento Card) */}
+          <div className="border border-border bg-white rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-bold text-ink-900 flex items-center gap-2">
                 <Clock size={16} className="text-emerald-600" />
                 Working Schedule & Hours Breakdown
@@ -562,7 +680,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
 
             {employee.workingSchedule?.lines && employee.workingSchedule.lines.length > 0 ? (
               <div className="space-y-3 pt-1">
-                <div className="border border-border rounded-lg overflow-hidden">
+                <div className="border border-border rounded-lg overflow-hidden bg-white">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-paper/80 border-b border-border text-ink-500 uppercase tracking-wider text-[11px]">
@@ -581,7 +699,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                         if (!line) {
                           return (
                             <tr key={dayName} className={cn('text-ink-400 bg-paper/20', isToday && 'bg-emerald-50/40')}>
-                              <td className="px-3.5 py-2 font-medium capitalize">
+                              <td className="px-3.5 py-2.5 font-medium capitalize">
                                 <div className="flex items-center gap-1.5">
                                   <span>{dayName.toLowerCase()}</span>
                                   {isToday && (
@@ -591,9 +709,9 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                                   )}
                                 </div>
                               </td>
-                              <td className="px-3.5 py-2 text-ink-400 italic">Off / Rest Day</td>
-                              <td className="px-3.5 py-2 text-ink-400">—</td>
-                              <td className="px-3.5 py-2 text-right text-ink-400 tnum">0.0h</td>
+                              <td className="px-3.5 py-2.5 text-ink-400 italic">Off / Rest Day</td>
+                              <td className="px-3.5 py-2.5 text-ink-400">—</td>
+                              <td className="px-3.5 py-2.5 text-right text-ink-400 tnum">0.0h</td>
                             </tr>
                           );
                         }
@@ -646,8 +764,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                       .reduce((sum, l) => {
                         const [startH, startM] = l.startTime.split(':').map(Number);
                         const [endH, endM] = l.endTime.split(':').map(Number);
-                        const totalMins =
-                          endH * 60 + endM - (startH * 60 + startM) - (l.breakMinutes || 0);
+                        const totalMins = endH * 60 + endM - (startH * 60 + startM) - (l.breakMinutes || 0);
                         return sum + Math.max(0, totalMins / 60);
                       }, 0)
                       .toFixed(1)}
@@ -656,11 +773,7 @@ export function EmployeeDetailPage({ employeeId, onNavigate, userSession }: Empl
                 </div>
               </div>
             ) : (
-              <div className="p-6 bg-paper rounded border border-dashed border-border text-center">
-                <p className="text-xs text-ink-400">
-                  No weekly working schedule lines assigned to this employee.
-                </p>
-              </div>
+              <p className="text-xs text-ink-400 italic">No working schedule lines assigned.</p>
             )}
           </div>
         </div>
