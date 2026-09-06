@@ -1,149 +1,236 @@
-# PeoplePay360: Integrated HR & Payroll Operations Platform
+# PeoplePay360
 
-> **Odoo Hackathon 2026 Project**  
-> An integrated, enterprise-grade Human Resource and Payroll operations platform bridging the gap between day-to-day HR records and accurate payroll execution.
+PeoplePay360 is an integrated HR and payroll operations platform built for the Odoo Hackathon 2026. It connects employee records, contracts, attendance, time off, salary rules, payroll processing, payslips, and executive reporting in one workflow.
 
----
+## Product Overview
 
-## 📌 Project Overview
+The platform is designed around a central payroll flow:
 
-Traditional HR tools treat employee records, working schedules, attendance, leave, and compensation as isolated silos. In real organizations, payroll is the critical convergence point of all these streams:
-- An employee may hold multiple contracts over time, but payroll must pinpoint the **exact contract active for that specific pay period**.
-- Standard working hours derive from an assigned **working schedule pattern**, while attendance logs track deviations and exceptions.
-- **Time-off balances** require verified allocations and approved deduction workflows before affecting pay.
-- Compensation calculations require **dynamic, configurable Salary Structures and ordered Salary Rules** (Basic, Allowances, Gross, Deductions, Net) driven by formulas and percentages rather than hardcoded figures.
+1. Maintain employee master data, working schedules, and profile images.
+2. Create historical contracts with date-overlap protection.
+3. Track attendance and review authorized corrections.
+4. Manage leave types, allocations, requests, approvals, and payroll impact.
+5. Configure salary structures and ordered calculation rules.
+6. Preview eligible employees and create a payrun.
+7. Compute, validate, finalize, and publish payslips.
+8. Download or print payslips and email invoice-style payroll statements.
+9. Monitor payroll, attendance, leave, and workforce metrics from the dashboard.
 
-**PeoplePay360** turns HR master data into a connected, automated operational flow: from the unified Employee Hub to 2-step Payrun batch processing, Payslip generation with automated validation warnings, and real-time executive dashboard analytics.
+## Features
 
----
+### Employee Management
 
-## 🚀 Key Features & Modules
+- List and Kanban views with search, department, and status filters.
+- **Cursor-based Pagination** with customizable page sizing (10, 20, 50 rows per page) and previous/next navigation.
+- Employee profiles with department, job position, manager, schedule, bank details, and status.
+- Connected counters for contracts, attendance, time off, and allocations.
+- Profile image upload through Multer and Cloudinary with fallback handling.
 
-### 1. 👤 Employee Master Management (Central Operational Hub)
-- **Multi-View Interface**: Switch between Kanban cards, dense List view, and detailed Employee Form view.
-- **Connected Smart-Buttons**: Instant counter badges linking directly to the employee's related Contracts, Attendance records, Time-Off requests, and Leave Allocations.
-- **Master Data**: Job position, department, reporting manager, assigned working schedule, bank details, and active status.
+### Contracts
 
-### 2. 📜 Contract Lifecycle Management
-- **Historical Tracking**: Full contract versioning over time (wages, job role, department, salary structure).
-- **Period-Specific Resolution**: Automated resolution ensuring payroll computes against the strictly active contract for the target pay period, preventing concurrent overlaps.
+- Standardized contract reference generation: sequential `CNT-YYYY-XXXX` code numbering.
+- **Paginated Table View** with dynamic page sizing (10, 20, 50 rows) and responsive horizontal scrolling.
+- Draft, running, expired, cancelled, and archived contract states.
+- Historical contract records with salary structure and wage information.
+- Date-range overlap detection preventing conflicting active contracts for the same employee.
+- Automatic expiration of older contracts when a non-overlapping newer contract is activated.
 
-### 3. ⏰ Working Schedules & Attendance Exception Handling
-- **Schedule Definitions**: Weekly day/time patterns with break deductions and automated weekly hour calculations.
-- **Attendance Logging**: Daily check-in, check-out, worked hour computations, and status indicators (Present, Late, Absent, Overtime).
-- **Exception Review & Manual Corrections**: Audit-trailed manual corrections restricted to authorized HR managers.
+### Attendance and Working Schedules
 
-### 4. 🏖️ Time Off & Allocation Engine
-- **Configurable Leave Types**: Paid leave, sick leave, unpaid leave with custom allocation requirements and payroll impact rules.
-- **Balance Allocations**: Formal request and approval workflow for employee leave balances with validity periods and remaining balance tracking.
-- **Automated Deduction**: Approved leave requests dynamically deduct from available allocations with transparent audit history.
+- Weekly schedules with working hours and break deductions.
+- Check-in, check-out, worked-hour calculation, and attendance status tracking.
+- Missing check-out and exception monitoring.
+- Authorized manual corrections with audit notes.
 
-### 5. 🧮 Configurable Salary Structures & Sequential Rule Engine
-- **Salary Structures**: Groupings of salary rules (e.g., "Regular Full-Time", "Contractor", "Executive").
-- **Ordered Execution Sequence**: Rules process in strict sequence (e.g., Basic $\rightarrow$ Allowances $\rightarrow$ Gross $\rightarrow$ Deductions/Tax $\rightarrow$ Net) allowing downstream rules to build upon earlier computations.
-- **Computation Modes**: Support for fixed amounts, percentages of base/gross, and dynamic formulas.
+### Time Off
 
-### 6. 💸 2-Step Payrun Wizard & Processing
-- **Step 1 (Scope Definition)**: Select pay period dates, payment date, and target Salary Structure.
-- **Step 2 (Employee Filtering)**: Preview and explicitly select eligible staff members before batch creation.
-- **Batch Processing Lifecycle**: `Draft` $\rightarrow$ `Compute` $\rightarrow$ `Validate` $\rightarrow$ `Mark Paid` $\rightarrow$ `Closed`.
-- **Pre-Payment Validation Warnings**: Flags anomalies prior to payout (missing bank details, duplicate payslips, unapproved leave, expired contracts).
+- Configurable paid, unpaid, sick, and custom leave types.
+- Leave allocations with validity periods and remaining balances.
+- Employee requests with approval and refusal workflows.
+- Approved leave deductions reflected in payroll calculations.
 
-### 7. 📄 Payslip Breakdown, PDF & Bulk Delivery
-- **Granular Line Items**: Transparent breakdown of every rule computation, working days, and deductions.
-- **PDF Generation**: Download printable, professional payslips per employee.
-- **Bulk Delivery**: Actionable workflow to distribute payslips via email to employees.
+### Salary Configuration
 
-### 8. 📊 Executive Payroll Dashboard
-- **Live KPIs**: Total Net Salary Paid, Payslips Generated, Average Salary, Approved Time-Off, Attendance Health score.
-- **Visual Analytics**: Salary Cost by Department, Monthly Net Salary Trends, and Attendance distribution.
-- **Operational Action Center**: Quick filters by Period, Department, and Employment Type.
+- Salary structures containing ordered salary rules.
+- Fixed amount and percentage-based calculations.
+- Basic salary, allowances, gross salary, deductions, and net salary rules.
+- Dependency-aware sequential rule execution.
 
----
+### Payroll and Payslips
 
-## 👥 Role-Based Access Control (RBAC)
+- Two-step payrun wizard with eligibility preview and employee selection.
+- Payrun lifecycle: `DRAFT` → `COMPUTED` → `VALIDATED` → `PAID`.
+- Validation warnings for missing bank details, invalid contracts, duplicate payslips, and leave issues.
+- Detailed payslip line items and salary calculations.
+- Printable and downloadable PDF payslips.
+- Invoice-style payroll statement emails to all employees in a finalized payrun.
+- Delivery results, `sentAt` tracking, and audit logging.
 
-| Role | Employee & Attendance | Contracts & Schedules | Time-Off Requests / Allocations | Payruns & Payslips | Salary Structures & Rules | System Admin |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Employee** | Self View / Check-In | Self View | Submit Requests / View Balance | View Own Payslips | ❌ | ❌ |
-| **HR Manager** | Full CRUD | Full CRUD | Full CRUD & Approve/Refuse | ❌ | ❌ | ❌ |
-| **HR Payroll User** | View | View | View | Create / Read / Update | Read Only | ❌ |
-| **HR Payroll Manager**| Full CRUD | Full CRUD | Full CRUD | Full CRUD (All Actions) | Full CRUD | ❌ |
-| **Admin** | Full Access | Full Access | Full Access | Full Access | Full Access | Full Access |
+### Dashboard
 
----
+- Net salary, payslip, average salary, leave, attendance, and headcount KPIs.
+- Salary cost by department and monthly payroll trends.
+- Attendance distribution and workforce trends.
+- Operational alerts for expiring contracts, missing check-outs, missing bank details, and payroll warnings.
 
-## 🛠️ Architecture & Tech Stack
+## Role-Based Access
 
+| Role | Main permissions |
+|---|---|
+| Employee | View own profile, attendance, time off, and published payslips; check in and out; submit leave requests |
+| HR Manager | Manage employees, contracts, schedules, attendance corrections, and time-off approvals; no payroll access |
+| HR Payroll User | View HR records; create and manage payruns within assigned payroll permissions; read salary configuration |
+| HR Payroll Manager | Full HR and payroll operations, including payrun finalization and payslip delivery |
+| Admin | Full system access |
+
+## Architecture
+
+```text
+PeoplePay360/
+├── client/       React + TypeScript + Vite + Tailwind CSS frontend
+├── server/       Node.js + Express + Prisma REST API
+├── docs/         Product and architecture documentation
+└── walkthrough.md Demo walkthrough
 ```
-PeoplePay360 (Monorepo)
-├── client/           # React + Vite + Tailwind CSS Frontend
-├── server/           # Node.js + Express + Prisma REST API
-├── docs/             # Specs, Schema, IA, and Architecture documents
-└── skills/           # UI and scoping playbooks
-```
 
-- **Backend**: Node.js & Express.js (RESTful API architecture)
-- **Database & ORM**: PostgreSQL 18 with Prisma ORM (Strict schema integrity, ACID migrations, relational relations)
-- **Validation**: Zod (End-to-end runtime request validation and type safety)
-- **Authentication**: JWT (`jsonwebtoken`) + `bcryptjs` with HTTP-only cookies and role-based route middleware
-- **Frontend**: Next.js (App Router) + React + Tailwind CSS + Lucide Icons + TanStack Table / Recharts
-- **PDF Generation**: Dedicated server-side/client-side printable PDF renderer
+### Technology Stack
 
----
+- Frontend: React, TypeScript, Vite, Tailwind CSS, Lucide React
+- Backend: Node.js, Express 5, JavaScript
+- Database: PostgreSQL with Prisma ORM
+- Validation: Zod
+- Authentication: JWT, bcryptjs, HTTP-only cookies, role middleware, CSRF protection
+- File storage: Multer memory storage and Cloudinary
+- Email: Nodemailer with SMTP
+- PDF: html2pdf.js and browser print layout
+- Security: Helmet, CORS controls, validation, authorization, and audit logs
 
-## ⚙️ Local Development Setup
+## Requirements
 
-### Prerequisites
-- **Node.js**: v18+ (tested on Node.js v22)
-- **PostgreSQL**: v14+ (tested on local PostgreSQL 18 with pgAdmin 4)
-- **Git**
+- Node.js 18 or newer
+- PostgreSQL 14 or newer
+- Git
+- Cloudinary account for employee images
+- SMTP account for account emails and payslip statements
 
-### 1. Database Setup
-Ensure PostgreSQL is running locally on port `5432`. Create a database named `odoo_hackathon_2026` or let Prisma sync it.
+## Local Setup
 
-### 2. Backend Setup
+### 1. Install dependencies
+
 ```bash
 cd server
-
-# Install dependencies
 npm install
 
-# Configure environment variables
-# Copy .env.example to .env and adjust credentials:
-# DB_URL="postgresql://postgres:<your_password>@localhost:5432/odoo_hackathon_2026?schema=public"
+cd ../client
+npm install
+```
 
-# Sync schema with database
+### 2. Configure the backend
+
+Create `server/.env` from `server/.env.example`:
+
+```env
+NODE_ENV=development
+PORT=5000
+CORS_ORIGIN=http://localhost:5173
+DB_URL=postgresql://postgres:password@localhost:5432/odoo_hackathon_2026?schema=public
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_EXPIRES_IN=7d
+
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+EMAIL_USER=your-account@gmail.com
+EMAIL_PASS=your-gmail-app-password
+
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+Never commit real credentials. Gmail requires an App Password when SMTP is enabled.
+
+### 3. Prepare and seed the database
+
+Create the PostgreSQL database, then run:
+
+```bash
+cd server
+npx prisma generate
 npx prisma db push
+npm run prisma:seed
+```
 
-# Start backend development server (runs on port 5000)
+The seed script populates the database with realistic demonstration data:
+- **30 authentic employees** across 5 core departments (Human Resources, Finance & Accounting, Engineering & Technology, Research & Development, Marketing & Communications) with assigned managers and job positions.
+- **30 sequential contracts** (`CNT-2026-0001` through `CNT-2026-0030`) linked to standard working schedules and salary structures.
+- **Role accounts** configured with pre-set test credentials:
+  - Admin: `admin@peoplepay360.com` / `Admin@123`
+  - HR Manager: `hr.manager@peoplepay360.com` / `Admin@123`
+  - HR Payroll User: `hr.payroll@peoplepay360.com` / `Admin@123`
+  - Employee: `employee@peoplepay360.com` / `Admin@123`
+- Comprehensive historical attendance logs, leave balances/requests, sample payruns, and computed payslips.
+
+### 4. Start the application
+
+In one terminal:
+
+```bash
+cd server
 npm run dev
 ```
 
-### 3. Verify Backend Health
-Open your browser or run:
+In another terminal:
+
 ```bash
-curl http://localhost:5000/api/v1/health
-```
-Expected response:
-```json
-{
-  "success": true,
-  "data": {
-    "status": "healthy",
-    "database": "connected"
-  }
-}
+cd client
+npm run dev
 ```
 
-### 4. Database Visualizer (Prisma Studio)
-To inspect and manipulate data in a GUI:
+Open `http://localhost:5173`. The API health check is available at `http://localhost:5000/api/v1/health`.
+
+## Verification & Automated Test Suites
+
+All core modules include comprehensive integration test suites:
+
 ```bash
+# Frontend validation
+cd client
+npm run typecheck    # Verifies strict TypeScript type safety
+npm run build        # Verifies production bundle build
+
+# Backend integration test suites
 cd server
-npm run prisma:studio
+npm run test:auth                   # Authentication, JWT, and RBAC
+node tests/employee.test.js         # Employee CRUD, cursor pagination, and uniqueness
+node tests/contracts.test.js        # Contract lifecycle, overlap detection, and CNT numbering
+node tests/attendance.test.js       # Check-in, check-out, and manual corrections
+node tests/timeoff.test.js          # Leave allocations, requests, and balance tracking
+node tests/salary.test.js           # Salary structures, rules, and calculation order
+node tests/payruns.test.js          # 2-step payruns, batch payslip computation, and status
+node tests/dashboard.test.js        # Analytics, department salary breakdown, and alerts
+node tests/workingSchedule.test.js  # Weekly working schedules and daily shift intervals
 ```
 
----
+## Demo Flow
 
-## 📄 License & Credits
-Developed for the **Odoo Hackathon 2026 Final Round**.
+For a complete demonstration, sign in as an Admin or HR Payroll Manager and show:
+
+1. **Employee Master & Directory**: View 30 seeded employees with cursor-based pagination (page size switching, search, and department filter).
+2. **Contracts Management**: Review `CNT-2026-XXXX` contracts, overlap rejection protection, active status auto-transition, and paginated table.
+3. **Attendance & Working Schedules**: Weekly schedules with shift intervals, check-in/out records, and audit notes.
+4. **Time Off Management**: Multi-type leave allocations (Paid, Sick, Casual) and employee approval workflow.
+5. **Salary Configuration**: Configurable salary structures with ordered fixed & percentage calculation rules.
+6. **Payrun Wizard**: 2-step payrun creation with eligibility preview, salary computation, and validation checks.
+7. **Payslip Generation & Email Delivery**: Professional payslip PDF export and automated email notification dispatch.
+8. **Executive Dashboard**: Headcount, payroll cost distribution by department, attendance KPIs, and active operational alerts.
+
+## Operational Considerations & Review Notes
+
+- **Pagination Scope**: Cursor-based pagination is implemented on the Employee Directory, and page-based pagination is implemented on the Contracts module. Remaining auxiliary pages (Attendance, Leave Allocations/Requests, Payslips) currently load active records in full scroll view.
+- **SMTP Configuration**: For live email delivery of payslips and onboarding credentials, ensure valid Gmail or custom SMTP credentials (`SMTP_SERVER`, `EMAIL_USER`, `EMAIL_PASS`) are configured in `server/.env`.
+- **Cloudinary Storage**: If Cloudinary credentials are omitted in `.env`, profile images fall back to standard gravatar/avatar initials.
+- **Timezone Standardization**: All backend timestamps are stored in UTC ISO format and converted to the client's local display format.
+
+## License
+
+Developed for the Odoo Hackathon 2026.

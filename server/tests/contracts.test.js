@@ -146,7 +146,7 @@ async function runTests() {
       res.status === 201 &&
       res.body.data?.status === 'DRAFT' &&
       res.body.data?.wage === 75000 &&
-      /^CON\/\d{4}\/\d{3,}$/.test(res.body.data?.reference)
+      /^(CNT|CON)[-/]\d{4}[-/]\d{3,}$/.test(res.body.data?.reference)
     ) {
       draftContractId = res.body.data.id;
       logPass(

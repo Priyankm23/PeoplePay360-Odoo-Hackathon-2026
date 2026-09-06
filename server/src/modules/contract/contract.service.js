@@ -29,7 +29,7 @@ class ContractService {
     const isActive = isRunning && isStarted && notEnded;
 
     const year = startStr ? new Date(startStr).getFullYear() : new Date().getFullYear();
-    const fallbackRef = `CON/${year}/001`;
+    const fallbackRef = `CNT-${year}-0001`;
 
     return {
       ...contract,
@@ -42,16 +42,20 @@ class ContractService {
   }
 
   /**
-   * Generate next sequential contract reference code: CON/YYYY/XXX
+   * Generate next sequential contract reference code: CNT-YYYY-XXXX
    */
   async generateReference(startDate) {
     const d = startDate ? new Date(startDate) : new Date();
     const year = isNaN(d.getFullYear()) ? new Date().getFullYear() : d.getFullYear();
-    const prefix = `CON/${year}/`;
+    const prefix = `CNT-${year}-`;
 
     const existing = await prisma.contract.findMany({
       where: {
-        reference: { startsWith: prefix },
+        OR: [
+          { reference: { startsWith: `CNT-${year}-` } },
+          { reference: { startsWith: `CNT/${year}/` } },
+          { reference: { startsWith: `CON/${year}/` } },
+        ],
       },
       select: { reference: true },
     });
@@ -59,9 +63,9 @@ class ContractService {
     let maxSeq = 0;
     for (const c of existing) {
       if (c.reference) {
-        const parts = c.reference.split('/');
+        const parts = c.reference.split(/[-/]/);
         if (parts.length >= 3) {
-          const num = parseInt(parts[2], 10);
+          const num = parseInt(parts[parts.length - 1], 10);
           if (!isNaN(num) && num > maxSeq) {
             maxSeq = num;
           }
@@ -69,7 +73,7 @@ class ContractService {
       }
     }
 
-    const nextSeq = String(maxSeq + 1).padStart(3, '0');
+    const nextSeq = String(maxSeq + 1).padStart(4, '0');
     return `${prefix}${nextSeq}`;
   }
 

@@ -57,14 +57,14 @@ export function EmployeesPage({ onNavigate, userSession }: EmployeesPageProps) {
     }
   }, [userSession, onNavigate]);
 
-  const userRole = userSession?.role || '';
+  const userRole = (userSession?.role || '') as string;
   const canManageEmployees =
-    userRole === 'ADMIN' ||
-    userRole === 'HR_MANAGER' ||
-    userRole === 'HR_PAYROLL_MANAGER' ||
     userRole === 'Admin' ||
     userRole === 'HR Manager' ||
-    userRole === 'HR Payroll Manager';
+    userRole === 'HR Payroll Manager' ||
+    userRole === 'ADMIN' ||
+    userRole === 'HR_MANAGER' ||
+    userRole === 'HR_PAYROLL_MANAGER';
 
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);

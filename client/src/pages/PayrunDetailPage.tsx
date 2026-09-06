@@ -252,12 +252,6 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
 
         {/* Top Actions */}
         <div className="flex items-center gap-2">
-          {isManagerOrAdmin && ['validated', 'paid'].includes(currentStatus) && (
-            <Button variant="outline" size="sm" onClick={handleSendPayslips} disabled={!!actionLoading}>
-              <Mail size={13} />
-              {actionLoading === 'send-payslips' ? 'Sending...' : 'Email Payslips'}
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={fetchPayrun} disabled={!!actionLoading}>
             <RefreshCw size={13} className={cn(actionLoading && 'animate-spin')} />
             Refresh
@@ -327,6 +321,19 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
 
           {/* Contextual Action Buttons */}
           <div className="flex items-center gap-2">
+            {isManagerOrAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendPayslips}
+                disabled={!!actionLoading || !['validated', 'paid'].includes(currentStatus)}
+                title={currentStatus === 'validated' || currentStatus === 'paid' ? 'Email payroll statements to all employees' : 'Available after the payrun is validated'}
+                className="text-emerald-800 border-emerald-200 hover:bg-emerald-50 disabled:text-ink-400 disabled:border-border"
+              >
+                {actionLoading === 'send-payslips' ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+                {actionLoading === 'send-payslips' ? 'Sending...' : 'Email Payslips'}
+              </Button>
+            )}
             {currentStatus === 'draft' && (
               <Button
                 variant="primary"

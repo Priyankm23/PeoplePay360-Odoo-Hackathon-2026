@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Pencil,
   ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Calendar,
   Building2,
@@ -55,6 +56,10 @@ export function ContractsPage({
   const [filterEmployeeId, setFilterEmployeeId] = useState<string | undefined>(initialEmployeeId);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Lookup options
   const [employees, setEmployees] = useState<any[]>([]);
@@ -125,6 +130,7 @@ export function ContractsPage({
 
   useEffect(() => {
     fetchContracts();
+    setCurrentPage(1);
   }, [filterEmployeeId, selectedStatus, searchQuery]);
 
   // Handle employee selection in creation form (auto-fill defaults)
@@ -281,13 +287,13 @@ export function ContractsPage({
     }
   };
 
-  const getStatusBadge = (status: string, isActive?: boolean) => {
+  const getStatusBadge = (status: string, _isActive?: boolean) => {
     switch (status) {
       case 'RUNNING':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {isActive ? 'Running Active' : 'Running'}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+            Active
           </span>
         );
       case 'DRAFT':
@@ -346,6 +352,11 @@ export function ContractsPage({
     return myStart && myStart <= cEnd && myEnd >= cStart;
   });
 
+  const totalContracts = contracts.length;
+  const totalPages = Math.max(1, Math.ceil(totalContracts / pageSize));
+  const paginatedContracts = contracts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const startIndex = totalContracts === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalContracts);
 
   return (
     <div className="space-y-6">
@@ -422,7 +433,7 @@ export function ContractsPage({
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300" />
           <input
             type="text"
-            placeholder="Search by employee, email, or contract code (CON/2026/...)..."
+            placeholder="Search by employee, email, or contract code (CNT-2026-...)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-xs bg-paper border border-border rounded focus:outline-none focus:border-emerald-600"
@@ -447,7 +458,7 @@ export function ContractsPage({
         </div>
       </div>
 
-      {/* Contracts Table */}
+      {/* Contracts Table & Pagination */}
       <div className="bg-white overflow-hidden">
         {isLoading ? (
           <div className="py-16 text-center text-xs text-ink-400">
@@ -465,127 +476,195 @@ export function ContractsPage({
             </p>
           </div>
         ) : (
-          <Table className="[&>table]:table-fixed border border-[#E7EAE7] rounded-sm-md shadow-none">
-            <THead>
-              <TH className="w-[8%]">Contract</TH>
-              <TH className="w-[15%]">Employee</TH>
-              <TH className="w-[14%]">Role &amp; Dept</TH>
-              <TH className="w-[15%]">Validity Period</TH>
-              <TH className="w-[12%]">Wage</TH>
-              <TH className="w-[17%]">Salary Structure</TH>
-              <TH align="center" className="w-[9%]">Status</TH>
-              <TH align="right" className="w-[8%]">Actions</TH>
-            </THead>
-            <TBody>
-              {contracts.map((c) => {
-                const emp = c.employee;
-                return (
-                  <TR
-                    key={c.id}
-                    className="cursor-pointer hover:bg-emerald-50/20 transition-colors"
-                    onClick={() => {
-                      setSelectedContract(c);
-                      setIsDetailOpen(true);
-                    }}
-                  >
-                    {/* Contract Reference */}
-                    <TD>
-                      <span className="font-mono text-xs font-bold text-ink-900 bg-paper px-2.5 py-1 rounded border border-border inline-flex items-center gap-1.5 shadow-3xs">
-                        <FileText size={13} className="text-emerald-600 shrink-0" />
-                        {c.reference || 'CON/----/---'}
-                      </span>
-                    </TD>
+          <div className="overflow-x-auto rounded-sm-md border border-[#E7EAE7] shadow-none bg-white">
+            <Table className="border-0 rounded-none shadow-none [&>table]:table-fixed [&>table]:min-w-[1180px]">
+              <THead>
+                <TH className="w-[12%] min-w-[130px] whitespace-nowrap">Contract</TH>
+                <TH className="w-[18%] min-w-[160px]">Employee</TH>
+                <TH className="w-[13%] min-w-[130px]">Role &amp; Dept</TH>
+                <TH className="w-[14%] min-w-[140px] whitespace-nowrap">Validity Period</TH>
+                <TH className="w-[10%] min-w-[100px] whitespace-nowrap">Wage</TH>
+                <TH className="w-[12%] min-w-[140px]">Salary Structure</TH>
+                <TH align="center" className="w-[9%] min-w-[105px] whitespace-nowrap px-2">Status</TH>
+                <TH align="right" className="w-[14%] min-w-[175px] whitespace-nowrap pr-4 pl-1">Actions</TH>
+              </THead>
+              <TBody>
+                {paginatedContracts.map((c) => {
+                  const emp = c.employee;
+                  return (
+                    <TR
+                      key={c.id}
+                      className="cursor-pointer hover:bg-emerald-50/20 transition-colors"
+                      onClick={() => {
+                        setSelectedContract(c);
+                        setIsDetailOpen(true);
+                      }}
+                    >
+                      {/* Contract Reference */}
+                      <TD className="whitespace-nowrap">
+                        <span className="font-mono text-xs font-bold text-ink-900 bg-paper px-2.5 py-1 rounded border border-border inline-flex items-center gap-1.5 shadow-3xs whitespace-nowrap">
+                          <FileText size={13} className="text-emerald-600 shrink-0" />
+                          {c.reference || 'CNT-XXXX-XXXX'}
+                        </span>
+                      </TD>
 
-                    {/* Employee info */}
-                    <TD className="pl-14">
-                      <div>
-                          <div className="font-semibold text-ink-900">
+                      {/* Employee info */}
+                      <TD>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-ink-900 truncate">
                             {emp?.firstName} {emp?.lastName}
                           </div>
-                          <div className="text-[11px] text-ink-400">{emp?.email}</div>
-                      </div>
-                    </TD>
+                          <div className="text-[11px] text-ink-400 truncate" title={emp?.email}>
+                            {emp?.email}
+                          </div>
+                        </div>
+                      </TD>
 
-                    {/* Department & Role */}
-                    <TD>
-                      <div className="text-xs font-medium text-ink-900">
-                        {c.jobPosition?.title || '—'}
-                      </div>
-                      <div className="text-[11px] text-ink-400">
-                        {c.department?.name || 'No department'}
-                      </div>
-                    </TD>
+                      {/* Department & Role */}
+                      <TD>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-ink-900 truncate" title={c.jobPosition?.title || '—'}>
+                            {c.jobPosition?.title || '—'}
+                          </div>
+                          <div className="text-[11px] text-ink-400 truncate" title={c.department?.name || 'No department'}>
+                            {c.department?.name || 'No department'}
+                          </div>
+                        </div>
+                      </TD>
 
-                    {/* Validity Period */}
-                    <TD className="tnum">
-                      <div className="text-xs text-ink-900 flex items-center gap-1.5">
-                        <span>{c.startDate}</span>
-                        <span className="text-ink-300">→</span>
-                        <span>{c.endDate || 'Indefinite'}</span>
-                      </div>
-                      {c.isActive && (
-                        <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">
-                          Current Active Contract
+                      {/* Validity Period */}
+                      <TD className="tnum whitespace-nowrap">
+                        <div className="text-xs text-ink-900 flex items-center gap-1.5 whitespace-nowrap">
+                          <span>{c.startDate}</span>
+                          <span className="text-ink-300">→</span>
+                          <span>{c.endDate || 'Indefinite'}</span>
+                        </div>
+                        {c.isActive && (
+                          <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block whitespace-nowrap">
+                            Current Active Contract
+                          </span>
+                        )}
+                      </TD>
+
+                      {/* Wage */}
+                      <TD className="tnum whitespace-nowrap">
+                        <span className="font-semibold text-ink-900">{formatCurrency(c.wage)}</span>
+                        <span className="text-[11px] text-ink-400 block">/ month</span>
+                      </TD>
+
+                      {/* Salary Structure */}
+                      <TD className="overflow-hidden">
+                        <span className="inline-flex max-w-full min-w-0 items-center gap-1 px-2 py-0.5 rounded text-xs bg-paper border border-border text-ink-700 font-medium truncate" title={c.salaryStructure?.name || 'Standard'}>
+                          <Building2 size={12} className="text-ink-400 shrink-0" />
+                          <span className="truncate">{c.salaryStructure?.name || 'Standard'}</span>
                         </span>
-                      )}
-                    </TD>
+                      </TD>
 
-                    {/* Wage */}
-                    <TD className="tnum">
-                      <span className="font-semibold text-ink-900">{formatCurrency(c.wage)}</span>
-                      <span className="text-[11px] text-ink-400 block">/ month</span>
-                    </TD>
+                      {/* Status */}
+                      <TD align="center" className="whitespace-nowrap px-2 overflow-hidden">
+                        {getStatusBadge(c.status, c.isActive)}
+                      </TD>
 
-                    {/* Salary Structure */}
-                    <TD>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-paper border border-border text-ink-700 font-medium">
-                        <Building2 size={12} className="text-ink-400" />
-                        {c.salaryStructure?.name || 'Standard'}
-                      </span>
-                    </TD>
-
-                    {/* Status */}
-                    <TD align="center">{getStatusBadge(c.status, c.isActive)}</TD>
-
-                    {/* Quick Actions */}
-                    <TD align="right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {canEdit && c.status === 'DRAFT' && (
-                          <button
-                            onClick={() => handleActivate(c.id)}
-                            className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1 border border-emerald-200"
-                            title="Activate Contract"
+                      {/* Quick Actions */}
+                      <TD align="right" className="whitespace-nowrap pr-4 pl-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          {canEdit && c.status === 'DRAFT' && (
+                            <button
+                              onClick={() => handleActivate(c.id)}
+                              className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1 border border-emerald-200 whitespace-nowrap shrink-0"
+                              title="Activate Contract"
+                            >
+                              <Check size={12} />
+                              Activate
+                            </button>
+                          )}
+                          {canEdit && c.status === 'RUNNING' && (
+                            <button
+                              onClick={() => openEditModal(c)}
+                              className="p-1 rounded text-ink-400 hover:text-ink-700 hover:bg-paper shrink-0"
+                              title="Edit terms"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => {
+                              setSelectedContract(c);
+                              setIsDetailOpen(true);
+                            }}
                           >
-                            <Check size={12} />
-                            Activate
-                          </button>
-                        )}
-                        {canEdit && c.status === 'RUNNING' && (
-                          <button
-                            onClick={() => openEditModal(c)}
-                            className="p-1 rounded text-ink-400 hover:text-ink-700 hover:bg-paper"
-                            title="Edit terms"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedContract(c);
-                            setIsDetailOpen(true);
-                          }}
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
+                            View
+                          </Button>
+                        </div>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+
+            {/* Pagination Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-surface border-t border-border text-xs text-ink-600">
+              <div className="flex items-center gap-2">
+                <span className="text-ink-500">
+                  Showing <span className="font-semibold text-ink-900">{startIndex}</span> to{' '}
+                  <span className="font-semibold text-ink-900">{endIndex}</span> of{' '}
+                  <span className="font-semibold text-ink-900">{totalContracts}</span> contracts
+                </span>
+                <span className="text-ink-300">|</span>
+                <span className="text-ink-500">
+                  Page <span className="font-semibold text-ink-900">{currentPage}</span>
+                  {totalPages > 0 && <span> of {totalPages}</span>}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-ink-500 text-[11px]">Rows per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-paper border border-border text-ink-800 text-xs rounded px-2 py-1 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1 || isLoading}
+                    className="px-2.5 py-1 text-xs flex items-center gap-1"
+                    title="Previous page"
+                  >
+                    <ChevronLeft size={14} />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages || isLoading}
+                    className="px-2.5 py-1 text-xs flex items-center gap-1"
+                    title="Next page"
+                  >
+                    Next
+                    <ChevronRight size={14} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
