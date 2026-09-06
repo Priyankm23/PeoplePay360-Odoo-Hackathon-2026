@@ -13,6 +13,7 @@ import {
   Users,
   ShieldAlert,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
 import { Avatar } from '@/components/Avatar';
 import { StatusDot } from '@/components/StatusDot';
@@ -131,6 +132,22 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
     }
   };
 
+  const handleSendPayslips = async () => {
+    if (!isManagerOrAdmin || !['validated', 'paid'].includes(currentStatus)) return;
+    if (!window.confirm('Send the invoice-style payroll statement to every employee in this payrun?')) return;
+    setActionLoading('send-payslips');
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const result = await api.payruns.sendPayslipStatements(payrunId);
+      setActionSuccess(`Sent ${result.sent.length} statement(s); ${result.failed.length} failed.`);
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to send payslip statements');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!isManagerOrAdmin) {
       setActionError('Only HR Payroll Managers and Admins can delete payruns.');
@@ -235,6 +252,12 @@ export function PayrunDetailPage({ payrunId, onNavigate, userSession }: PayrunDe
 
         {/* Top Actions */}
         <div className="flex items-center gap-2">
+          {isManagerOrAdmin && ['validated', 'paid'].includes(currentStatus) && (
+            <Button variant="outline" size="sm" onClick={handleSendPayslips} disabled={!!actionLoading}>
+              <Mail size={13} />
+              {actionLoading === 'send-payslips' ? 'Sending...' : 'Email Payslips'}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={fetchPayrun} disabled={!!actionLoading}>
             <RefreshCw size={13} className={cn(actionLoading && 'animate-spin')} />
             Refresh

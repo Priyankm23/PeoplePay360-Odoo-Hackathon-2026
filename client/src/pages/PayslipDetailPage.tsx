@@ -57,7 +57,7 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
     try {
       await html2pdf()
         .set({
-          margin: [0.4, 0.4, 0.4, 0.4],
+          margin: [0.2, 0.25, 0.2, 0.25],
           filename: `payslip-${payslip?.payrunRef || payslipId}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: {
@@ -73,6 +73,7 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
                 clonedElement.style.position = 'static';
                 clonedElement.style.transform = 'none';
                 clonedElement.style.margin = '0 auto';
+                clonedElement.style.padding = '20px 28px';
                 clonedElement.style.boxShadow = 'none';
                 clonedElement.style.border = '1px solid #E2E8E2';
               }
@@ -198,9 +199,9 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
       </div>
 
       {/* Payslip Document Container */}
-      <div className="payslip-document bg-surface border border-border rounded-lg p-8 shadow-card space-y-6 print:border-none print:shadow-none print:p-0">
+      <div className="payslip-document bg-surface border border-border rounded-lg p-6 shadow-card space-y-4 print:border-none print:shadow-none print:p-0">
         {/* Company & Document Header */}
-        <div className="flex items-start justify-between border-b border-border pb-6">
+        <div className="flex items-start justify-between border-b border-border pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="PeoplePay360" className="h-12 w-auto object-contain" />
@@ -226,7 +227,7 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
         </div>
 
         {/* Robust Structured Employee & Contract Information Card */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAF8] p-5 rounded-lg border border-[#E2E8E2]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#F8FAF8] p-4 rounded-lg border border-[#E2E8E2]">
           {/* Column 1: Employee Information */}
           <div className="space-y-2">
             <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 pb-1.5 border-b border-[#E2E8E2]">
@@ -362,8 +363,8 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
           </div>
 
           {/* Deductions Section */}
-          <div className="pt-4 space-y-2">
-            <div className="text-xs font-bold text-ink-900 uppercase tracking-wider border-b border-border pb-2">
+          <div className="pt-3 space-y-1.5">
+            <div className="text-xs font-bold text-ink-900 uppercase tracking-wider border-b border-border pb-1.5">
               Statutory & Voluntary Deductions
             </div>
 
@@ -403,7 +404,7 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
           </div>
 
           {/* Net Salary Highlight Banner */}
-          <div className="mt-6 p-4 rounded-lg bg-chartreuse-50 border-2 border-chartreuse-400 flex items-center justify-between">
+          <div className="mt-4 p-3.5 rounded-lg bg-chartreuse-50 border-2 border-chartreuse-400 flex items-center justify-between">
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-chartreuse-900">
                 Net Disbursable Salary
@@ -419,7 +420,7 @@ export function PayslipDetailPage({ payslipId, onNavigate }: PayslipDetailPagePr
         </div>
 
         {/* Footer info */}
-        <div className="pt-6 border-t border-border-soft text-center text-[11px] text-ink-400 space-y-1">
+        <div className="pt-4 border-t border-border-soft text-center text-[11px] text-ink-400 space-y-1">
           <div className="flex items-center justify-center gap-1.5">
             <FileCheck2 size={13} className="text-emerald-600" />
             <span>Electronically verified & signed through PeoplePay360 Deterministic Payroll Engine</span>

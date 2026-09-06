@@ -1,6 +1,7 @@
 const prisma = require('../../config/prisma');
 const { ApiError } = require('../../utils/apiResponse');
 const { recordAudit } = require('../../utils/audit');
+const { sendPayslipStatementEmail } = require('../../utils/mailer');
 
 class PayrunService {
   /**
@@ -734,6 +735,62 @@ class PayrunService {
     });
 
     return { id, success: true, message: 'Payrun deleted successfully' };
+  }
+
+  async sendPayslipStatements(id, actorUser, reqMeta = {}) {
+    if (!this.isValidUUID(id)) throw ApiError.notFound('Payrun not found', 'PAYRUN_NOT_FOUND');
+
+    const payrun = await prisma.payrun.findUnique({
+      where: { id },
+      include: {
+        payslips: {
+          include: {
+            employee: { select: { firstName: true, lastName: true, email: true } },
+            contract: { select: { reference: true } },
+            lines: { select: { name: true, amount: true }, orderBy: { createdAt: 'asc' } },
+          },
+        },
+      },
+    });
+
+    if (!payrun) throw ApiError.notFound('Payrun not found', 'PAYRUN_NOT_FOUND');
+    if (!['VALIDATED', 'PAID'].includes(payrun.status)) {
+      throw ApiError.conflict('Payslips can only be sent after the payrun is validated or paid.', { status: payrun.status }, 'PAYRUN_NOT_READY_FOR_DELIVERY');
+    }
+
+    const results = { sent: [], failed: [] };
+    for (const payslip of payrun.payslips) {
+      const employeeName = `${payslip.employee.firstName} ${payslip.employee.lastName}`;
+      if (!payslip.employee.email) {
+        results.failed.push({ payslipId: payslip.id, employeeName, reason: 'Employee has no email address' });
+        continue;
+      }
+
+      const grossSalary = Number(payslip.grossSalary || 0);
+      const netSalary = Number(payslip.netSalary || 0);
+      const deductions = Math.max(0, grossSalary - netSalary);
+      try {
+        await sendPayslipStatementEmail({
+          email: payslip.employee.email,
+          employeeName,
+          payrunName: payrun.name,
+          periodStart: this.formatDate(payrun.periodStart),
+          periodEnd: this.formatDate(payrun.periodEnd),
+          reference: payslip.contract?.reference || payslip.id,
+          grossSalary: grossSalary.toFixed(2),
+          deductions: deductions.toFixed(2),
+          netSalary: netSalary.toFixed(2),
+          lines: payslip.lines.map((line) => ({ name: line.name, amount: Number(line.amount).toFixed(2) })),
+        });
+        await prisma.payslip.update({ where: { id: payslip.id }, data: { sentAt: new Date() } });
+        results.sent.push({ payslipId: payslip.id, employeeName, email: payslip.employee.email });
+      } catch (error) {
+        results.failed.push({ payslipId: payslip.id, employeeName, reason: error.message });
+      }
+    }
+
+    await recordAudit({ actorId: actorUser?.id, action: 'PAYSLIPS_SENT', entity: 'Payrun', entityId: id, metadata: { sent: results.sent.length, failed: results.failed.length }, ipAddress: reqMeta.ip });
+    return { payrunId: id, total: payrun.payslips.length, ...results };
   }
 
   /**

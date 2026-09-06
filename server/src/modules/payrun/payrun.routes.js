@@ -72,6 +72,12 @@ payrunsRouter.post(
   payrunController.markPaid
 );
 
+payrunsRouter.post(
+  '/:id/send-payslips',
+  authorize(PAYRUN_MANAGER_ROLES),
+  payrunController.sendPayslipStatements
+);
+
 // Delete Payrun (Permitted only in DRAFT or COMPUTED, HR Payroll Manager & Admin only)
 payrunsRouter.delete(
   '/:id',

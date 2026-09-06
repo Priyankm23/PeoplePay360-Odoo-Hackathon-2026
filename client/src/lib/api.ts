@@ -574,6 +574,11 @@ class ApiClient {
         method: 'POST',
       }),
 
+    sendPayslipStatements: async (id: string) =>
+      this.request<any>(`/payruns/${id}/send-payslips`, {
+        method: 'POST',
+      }),
+
     delete: async (id: string) =>
       this.request<any>(`/payruns/${id}`, {
         method: 'DELETE',

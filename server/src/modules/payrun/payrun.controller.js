@@ -94,6 +94,15 @@ class PayrunController {
     }
   }
 
+  async sendPayslipStatements(req, res, next) {
+    try {
+      const result = await payrunService.sendPayslipStatements(req.params.id, req.user, { ip: req.ip });
+      return ApiResponse.success(res, result, 'Payslip statements processed successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getPayslips(req, res, next) {
     try {
       const { payrunId, employeeId, status } = req.query;
